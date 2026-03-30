@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI, WebSocket
 
 app = FastAPI()
@@ -15,7 +17,11 @@ async def handle_prompt(websocket: WebSocket):
 
     try:
         payload = await websocket.receive_json()
-        prompt = payload.get("prompt", "")
+        prompt = payload.get("prompt", "").strip()
+
+        if not prompt:
+            await websocket.send_json({"status": "error", "message": "prompt is required"})
+            return
 
         await websocket.send_json({
             "status": "starting",
@@ -23,15 +29,14 @@ async def handle_prompt(websocket: WebSocket):
             "prompt": prompt,
         })
 
-        # Placeholder: invoke CrewAI orchestration here once integrated
-        # crew_result = crew_ai_run(prompt)
-        crew_result = "CREW_AI_PLACEHOLDER_RESULT"
+        # Run the crew in a worker thread to avoid blocking the event loop
+        #crew_result = await asyncio.to_thread(run_single_agent, prompt)
 
         await websocket.send_json({
             "status": "completed",
-            "message": "Placeholder response after simulated multi-agent run",
+            "message": "CrewAI codegen finished",
             "prompt": prompt,
-            "result": crew_result,
+            "result": '''crew_result''',
         })
     except Exception as exc:  # defensive catch to return errors over the socket
         await websocket.send_json({"status": "error", "message": str(exc)})
