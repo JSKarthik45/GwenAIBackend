@@ -1,4 +1,4 @@
 fastapi
 uvicorn
-crewaicrewai==1.12.2
+crewai==1.12.2
 pydantic>=2.4.2
