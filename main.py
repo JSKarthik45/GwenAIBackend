@@ -1,14 +1,24 @@
 import asyncio
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException
 
 app = FastAPI()
 
-@app.get("/")
+
+def run_prompt_flow_sync(prompt: str) -> str:
+    """Placeholder for the blocking CrewAI call you will plug in later."""
+    return f"crew_result for: {prompt}"
+
+
+async def run_prompt_flow(prompt: str) -> str:
+    # Offload blocking work to a worker thread so the event loop stays responsive
+    return await asyncio.to_thread(run_prompt_flow_sync, prompt)
+
+@app.get("/api/wakeBackend")
 def read_root():
     return {
         "status": "ok",
-        "message": "GwenAI backend is running; connect via /ws for WebSocket",
+        "message": "GwenAI backend is running",
     }
 
 @app.websocket("/ws")
@@ -29,16 +39,32 @@ async def handle_prompt(websocket: WebSocket):
             "prompt": prompt,
         })
 
-        # Run the crew in a worker thread to avoid blocking the event loop
-        #crew_result = await asyncio.to_thread(run_single_agent, prompt)
+        crew_result = await run_prompt_flow(prompt)
 
         await websocket.send_json({
             "status": "completed",
             "message": "CrewAI codegen finished",
             "prompt": prompt,
-            "result": '''crew_result''',
+            "result": crew_result,
         })
     except Exception as exc:  # defensive catch to return errors over the socket
         await websocket.send_json({"status": "error", "message": str(exc)})
     finally:
         await websocket.close()
+
+
+@app.post("/api/prompt")
+async def handle_prompt_api(body: dict):
+    prompt = body.get("prompt", "").strip()
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
+
+    crew_result = await run_prompt_flow(prompt)
+
+    return {
+        "status": "completed",
+        "message": "CrewAI codegen finished",
+        "prompt": prompt,
+        "result": crew_result,
+    }
