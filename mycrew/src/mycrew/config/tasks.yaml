@@ -1,17 +1,57 @@
-research_task:
+plan_requirements:
   description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is {current_year}.
+    From the user's prompt ({content_prompt}), extract ONLY essential MVP features.
+    Target JSX implementation in src/ folder for Expo SDK 54. Identify core screens, UI flows, and basic state needed.
+    Ensure all features are testable in Expo Go.
+    NO extra features, NO performance optimizations, NO nice-to-haves.
   expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
+    Concise MVP brief for JSX: core features only, screens/flows, basic state model.
+    Bullet points only. Keep it SHORT. All features must work in Expo Go.
+  agent: planner
 
-reporting_task:
+design_architecture:
   description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
+    Design minimal MVP file structure with ONLY essential screens and components.
+    Output: list of files to create in src/ folder.
+    JSX files only - NO TypeScript, NO TSX.
+    Ensure all files are Expo Go compatible on Expo SDK 54.
+    For EACH file, specify:
+      - File path and name
+      - One-sentence purpose
+      - List of required exports (functions, components, hooks)
+      - Key state/props this file manages
+      - Required dependencies/imports from other files
+      - Specific event handlers or callbacks required
+    Note any required external libraries.
   expected_output: >
-    A fully fledged report with the main topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
+    Detailed file specification list with:
+    (1) Each file path, purpose, required exports, state/props, dependencies, and required handlers
+    (2) External libraries list
+    Examples format: "src/screens/HomeScreen.js - Main todo list screen. Exports: HomeScreen component. State: [todos]. Manages: FlatList display, add-todo navigation. Requires: TodoContext hook."
+    ALL files must be fully specified with no placeholder or partial descriptions.
+  agent: architect
+  context: [plan_requirements]
+
+implement_mvp_features:
+  description: >
+    Implement only MVP src/ folder files from the architecture plan.
+    CRITICAL: For EACH file you implement, you MUST:
+      1. Read the architect's specification for that file
+      2. Implement ALL required exports, state management, handlers, and callbacks listed
+      3. Verify your code includes all dependencies mentioned
+      4. Cross-check: Every function/component mentioned in the spec must be in your code
+      5. NO placeholder implementations, NO stubs, NO "TODO" comments
+    Create new feature files (under src/) with COMPLETE JSX implementation.
+    Use file_writer for one file at a time. Read existing files first before updates.
+    Track each external library used with track_dependency (library name only, no version).
+    JSX ONLY - no TypeScript, no TSX. Write code that works perfectly in Expo Go.
+    Ensure each tool call has valid JSON arguments and valid JavaScript content.
+    Avoid malformed escape sequences or stray backslashes in generated code.
+    NEVER modify app.js, App.jsx, or root-level files.
+    Do not provide a conversational response or a plan. Proceed directly to using the file_writer tool for each file. If you need to write multiple files, call the tool for each one sequentially without extra text.
+    Always write a App.jsx file inside src/ for the entry point if one is not present. NEVER modify root-level files.
+  expected_output: >
+    All src/ files (screens, components, utilities) FULLY implemented in JSX per the architect's specification. Every required export, handler, state, and dependency listed in the spec must be present and functional. Ready for Expo Go testing with no placeholders or incomplete implementations.
+  agent: feature_builder
+  context: [design_architecture]
+

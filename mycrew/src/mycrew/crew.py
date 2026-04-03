@@ -1,63 +1,110 @@
+import os
+
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
+from crewai import LLM
 from crewai.agents.agent_builder.base_agent import BaseAgent
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+from crewai.project import CrewBase, agent, crew, task
+
+from mycrew.tools.custom_tool import (
+    FileReaderTool,
+    FileWriterTool,
+    TrackDependencyTool,
+)
+
+def _required_llm_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise ValueError(f"Missing required LLM environment variable: {name}")
+    return value
+
+
+def _int_env(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
 
 @CrewBase
 class Mycrew():
-    """Mycrew crew"""
+    """Mycrew crew that plans, designs, and builds a multi-file codebase from a prompt."""
 
     agents: list[BaseAgent]
     tasks: list[Task]
-
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
-    @agent
-    def researcher(self) -> Agent:
-        return Agent(
-            config=self.agents_config['researcher'], # type: ignore[index]
-            verbose=True
-        )
+    agents_config = "config/agents.yaml"
+    tasks_config = "config/tasks.yaml"
 
     @agent
-    def reporting_analyst(self) -> Agent:
+    def planner(self) -> Agent:
+        planner_llm = LLM(model=_required_llm_env("PLANNER_LLM"))
         return Agent(
-            config=self.agents_config['reporting_analyst'], # type: ignore[index]
-            verbose=True
+            config=self.agents_config['planner'],
+            llm=planner_llm,
+            verbose=True,
+            max_tokens=1500,
         )
 
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
-    @task
-    def research_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['research_task'], # type: ignore[index]
+    @agent
+    def architect(self) -> Agent:
+        architect_llm = LLM(model=_required_llm_env("ARCHITECT_LLM"))
+        return Agent(
+            config=self.agents_config['architect'],
+            llm=architect_llm,
+            verbose=True,
+            max_tokens=8000,
+        )
+
+    @agent
+    def feature_builder(self) -> Agent:
+        feature_llm = LLM(
+            model=_required_llm_env("FEATURE_BUILDER_LLM"),
+            temperature=0,
+        )
+        # File generation requires at least one tool call per file.
+        # Detailed spec implementation may need multiple iterations per file for cross-verification.
+        # Keep a safe floor so the agent can finish multi-file plans with full implementations.
+        max_iter = max(_int_env("FEATURE_MAX_ITER", 20), 16)
+        return Agent(
+            config=self.agents_config['feature_builder'], 
+            llm=feature_llm,
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+            verbose=True,
+            max_iter=max_iter,
+            max_retry_limit=4,
+            allow_delegation=False,
+            memory=False,
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def plan_requirements(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'], # type: ignore[index]
-            output_file='report.md'
+            config=self.tasks_config['plan_requirements'],
+        )
+
+    @task
+    def design_architecture(self) -> Task:
+        return Task(
+            config=self.tasks_config['design_architecture'], 
+        )
+
+    @task
+    def implement_mvp_features(self) -> Task:
+        return Task(
+            config=self.tasks_config['implement_mvp_features'],  
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
         )
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Mycrew crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
-
+        """Creates the multi-agent crew for planning, architecture, and implementation."""
         return Crew(
-            agents=self.agents, # Automatically created by the @agent decorator
-            tasks=self.tasks, # Automatically created by the @task decorator
+            agents=self.agents,
+            tasks=self.tasks,
             process=Process.sequential,
+            planning=False,
             verbose=True,
-            # process=Process.hierarchical, # In case you wanna use that instead https://docs.crewai.com/how-to/Hierarchical/
+            max_rpm=2,
+            cache=True,
         )

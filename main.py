@@ -1,13 +1,31 @@
 import asyncio
+import os
+import sys
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, HTTPException
+
+# Make sure the mycrew package is importable when running from repo root
+_CREW_SRC = Path(__file__).resolve().parent / "mycrew" / "src"
+if str(_CREW_SRC) not in sys.path:
+    sys.path.insert(0, str(_CREW_SRC))
+
+from mycrew.crew import Mycrew
 
 app = FastAPI()
 
 
 def run_prompt_flow_sync(prompt: str) -> str:
-    """Placeholder for the blocking CrewAI call you will plug in later."""
-    return f"crew_result for: {prompt}"
+    """Run the multi-agent crew with the provided prompt and return status text."""
+    if not prompt.strip():
+        raise ValueError("prompt is empty")
+
+    load_dotenv()
+
+    # Kick off the crew; the builder writes files to disk via the file_writer tool.
+    Mycrew().crew().kickoff(inputs={"content_prompt": prompt})
+    return "crew_completed"
 
 
 async def run_prompt_flow(prompt: str) -> str:
