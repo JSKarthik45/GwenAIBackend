@@ -207,12 +207,11 @@ def install_tracked_packages() -> None:
         print(f"❌ Error syncing package.json: {e}")
 
 
-def run():
+def run(content_prompt: str = "Create a Todo App") -> str:
     """Run the MVP app generator with minimal token usage and fixed app naming."""
     
     load_dotenv(override=True)
     
-    content_prompt = "Create a Todo App"
     app_folder = "MyApp"
     
     print("🎯 Generating MVP: MyApp")
@@ -224,7 +223,7 @@ def run():
     # Step 1: Bootstrap Expo template directly (not through agents)
     if not bootstrap_expo_directly():
         print("❌ Failed to bootstrap Expo template. Aborting.")
-        return
+        return "bootstrap_failed"
     
     # Step 2: Create/preserve index.js entry point (required by Expo)
     create_index_js()
@@ -247,6 +246,7 @@ def run():
     install_tracked_packages()
     
     print("\n✅ MVP app generation complete!")
+    return "crew_completed"
 
 
 if __name__ == "__main__":

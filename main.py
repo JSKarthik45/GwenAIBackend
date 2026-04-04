@@ -11,7 +11,7 @@ _CREW_SRC = Path(__file__).resolve().parent / "mycrew" / "src"
 if str(_CREW_SRC) not in sys.path:
     sys.path.insert(0, str(_CREW_SRC))
 
-from mycrew.crew import Mycrew
+from mycrew.main import run as run_generator
 
 app = FastAPI()
 
@@ -23,9 +23,8 @@ def run_prompt_flow_sync(prompt: str) -> str:
 
     load_dotenv()
 
-    # Kick off the crew; the builder writes files to disk via the file_writer tool.
-    Mycrew().crew().kickoff(inputs={"content_prompt": prompt})
-    return "crew_completed"
+    # Delegate to the generator entry point so the same bootstrap/run flow is used everywhere.
+    return run_generator(content_prompt=prompt)
 
 
 async def run_prompt_flow(prompt: str) -> str:
