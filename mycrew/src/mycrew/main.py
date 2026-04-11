@@ -25,21 +25,48 @@ from mycrew.tools.custom_tool import (
 
 
 def _is_tool_call_payload_error(exc: Exception) -> bool:
+    """Detect Groq tool_use_failed errors across all exception types."""
     text = str(exc)
-    return "tool_use_failed" in text and "Failed to call a function" in text
+    error_type = type(exc).__name__
+    
+    # Check for common indicators of tool_use_failed
+    is_tool_error = (
+        "tool_use_failed" in text or
+        '"code":"tool_use_failed"' in text or
+        "Failed to call a function" in text
+    )
+    
+    # Log detection attempt for debugging
+    if is_tool_error:
+        print(f"[DEBUG] Tool-call error detected: {error_type} | {text[:200]}")
+    
+    return is_tool_error
 
 
-def _run_crew_with_retries(inputs: dict[str, str]):
+def _run_crew_with_retries(inputs: dict[str, str]) -> None:
+    """Run crew with automatic retry on Groq tool_use_failed errors."""
     attempts = 3
     for attempt in range(1, attempts + 1):
         try:
-            return Mycrew().crew().kickoff(inputs=inputs)
+            print(f"[Crew Attempt {attempt}/{attempts}] Starting crew kickoff...")
+            Mycrew().crew().kickoff(inputs=inputs)
+            print(f"[Crew Attempt {attempt}/{attempts}] ✅ Success!")
+            return
         except Exception as exc:
-            if _is_tool_call_payload_error(exc) and attempt < attempts:
+            is_retryable = _is_tool_call_payload_error(exc)
+            has_attempts_left = attempt < attempts
+            
+            if is_retryable and has_attempts_left:
                 print(
-                    f"⚠ Tool-call payload rejected by provider (attempt {attempt}/{attempts}). Retrying crew kickoff..."
+                    f"⚠ Tool-call payload rejected by provider (attempt {attempt}/{attempts}). "
+                    f"Retrying in 2 seconds..."
                 )
+                import time
+                time.sleep(2)  # Brief pause before retry
                 continue
+            
+            # No retry: either not a tool error, or out of attempts
+            print(f"[Crew Attempt {attempt}/{attempts}] ❌ Failed (retryable={is_retryable}, attempts_left={has_attempts_left})")
             raise
 
 
