@@ -6,9 +6,23 @@ from typing import Type
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-# Base directory for all generated files; prevents cluttering the repo root
-# This is set dynamically by main.py based on user prompt
-BASE_OUTPUT = Path("D:/GwenAIBackend/GeneratedMVP/MyApp").resolve()
+def _generated_mvp_root() -> Path:
+    """Return root folder for generated apps.
+
+    Priority:
+    1) GENERATED_MVP_ROOT env var (if set)
+    2) <repo_root>/GeneratedMVP
+    """
+    repo_root = Path(__file__).resolve().parents[4]
+    configured = os.getenv("GENERATED_MVP_ROOT")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    return (repo_root / "GeneratedMVP").resolve()
+
+
+# Base directory for all generated files; prevents cluttering the repo root.
+# This is set dynamically by main.py based on user prompt.
+BASE_OUTPUT = (_generated_mvp_root() / "MyApp").resolve()
 DEPENDENCY_REGISTRY = BASE_OUTPUT / ".agent_dependency_registry.json"
 BOOTSTRAP_MARKER = BASE_OUTPUT / ".expo_bootstrapped"
 
@@ -21,7 +35,7 @@ def set_base_output_path(app_folder: str) -> None:
         app_folder: Folder name under GeneratedMVP/ (e.g., "todo_app", "note_app")
     """
     global BASE_OUTPUT, DEPENDENCY_REGISTRY, BOOTSTRAP_MARKER
-    BASE_OUTPUT = Path(f"D:/GwenAIBackend/GeneratedMVP/{app_folder}").resolve()
+    BASE_OUTPUT = (_generated_mvp_root() / app_folder).resolve()
     BASE_OUTPUT.mkdir(parents=True, exist_ok=True)
     DEPENDENCY_REGISTRY = BASE_OUTPUT / ".agent_dependency_registry.json"
     BOOTSTRAP_MARKER = BASE_OUTPUT / ".expo_bootstrapped"
@@ -63,6 +77,18 @@ def _resolve_target(path: str) -> Path:
 
     return target
 
+
+def _normalize_dependency_name(name: str) -> str:
+    """Normalize dependency names to avoid invalid npm package keys.
+
+    Common model output issue: scoped package missing leading '@', e.g.
+    react-native-async-storage/async-storage -> @react-native-async-storage/async-storage
+    """
+    lib = str(name).strip()
+    if "/" in lib and not lib.startswith("@"):
+        return f"@{lib}"
+    return lib
+
 def _read_dependency_registry() -> dict[str, list[str]]:
     if not DEPENDENCY_REGISTRY.exists():
         return {"dependencies": [], "devDependencies": []}
@@ -94,8 +120,8 @@ def _read_dependency_registry() -> dict[str, list[str]]:
         dev_deps = list(dev_deps.keys())
 
     normalized = {
-        "dependencies": sorted({str(item).strip() for item in deps if str(item).strip()}),
-        "devDependencies": sorted({str(item).strip() for item in dev_deps if str(item).strip()}),
+        "dependencies": sorted({_normalize_dependency_name(item) for item in deps if str(item).strip()}),
+        "devDependencies": sorted({_normalize_dependency_name(item) for item in dev_deps if str(item).strip()}),
     }
 
     # Self-heal malformed or legacy formats to keep subsequent runs stable.
@@ -182,7 +208,7 @@ class TrackDependencyTool(BaseTool):
         if normalized_type not in {"dependencies", "devDependencies"}:
             normalized_type = "dependencies"
 
-        lib = library.strip()
+        lib = _normalize_dependency_name(library)
         if not lib:
             return "ERROR: library is required."
 

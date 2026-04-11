@@ -16,12 +16,26 @@ from mycrew.main import run as run_generator
 app = FastAPI()
 
 
+def _validate_llm_env() -> None:
+    required = [
+        "PLANNER_LLM",
+        "ARCHITECT_LLM",
+        "FEATURE_BUILDER_LLM",
+        "GROQ_API_KEY",
+    ]
+    missing = [name for name in required if not os.getenv(name)]
+    if missing:
+        raise ValueError(f"Missing required environment variable(s): {', '.join(missing)}")
+
+
 def run_prompt_flow_sync(prompt: str) -> str:
     """Run the multi-agent crew with the provided prompt and return status text."""
     if not prompt.strip():
         raise ValueError("prompt is empty")
 
-    load_dotenv()
+    repo_root = Path(__file__).resolve().parent
+    load_dotenv(dotenv_path=repo_root / ".env", override=True)
+    _validate_llm_env()
 
     # Delegate to the generator entry point so the same bootstrap/run flow is used everywhere.
     return run_generator(content_prompt=prompt)
