@@ -243,6 +243,11 @@ class PromptResponse(BaseModel):
     status: str
 
 
+class InitUserResponse(BaseModel):
+    user_id: str
+    status: str
+
+
 class QRRequest(BaseModel):
     project_id: str
 
@@ -264,6 +269,12 @@ async def wake_backend():
         "status": "ok",
         "message": "GwenAI backend is running",
     }
+
+
+@app.get("/api/init-user", response_model=InitUserResponse)
+async def init_user():
+    """Generate and return a unique user_id for client initialization."""
+    return InitUserResponse(user_id=str(uuid.uuid4()), status="ok")
 
 
 @app.get("/api/debug/state")
