@@ -42,8 +42,8 @@ class Mycrew():
         return Agent(
             config=self.agents_config['planner'],
             llm=planner_llm,
-            verbose=True,
-            max_tokens=1500,
+            verbose=False,
+            max_tokens=1000,
         )
 
     @agent
@@ -52,8 +52,8 @@ class Mycrew():
         return Agent(
             config=self.agents_config['architect'],
             llm=architect_llm,
-            verbose=True,
-            max_tokens=8000,
+            verbose=False,  # Disable verbose to reduce context
+            max_tokens=4000,  # Reduced from 8000 (fewer files = shorter spec)
         )
 
     @agent
@@ -62,19 +62,20 @@ class Mycrew():
             model=_required_llm_env("FEATURE_BUILDER_LLM"),
             temperature=0,
         )
-        # File generation requires at least one tool call per file.
-        # Detailed spec implementation may need multiple iterations per file for cross-verification.
-        # Keep a safe floor so the agent can finish multi-file plans with full implementations.
-        max_iter = max(_int_env("FEATURE_MAX_ITER", 20), 16)
+        # Strict limits to prevent request payloads exceeding Groq's 8KB tool parameter limit.
+        # Fewer iterations + output length limit = smaller context accumulation.
+        max_iter = max(_int_env("FEATURE_MAX_ITER", 10), 8)  # Reduced from 20 to 10
         return Agent(
             config=self.agents_config['feature_builder'], 
             llm=feature_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
-            verbose=True,
+            verbose=False,  # Disable verbose to reduce context size
             max_iter=max_iter,
-            max_retry_limit=4,
+            max_tokens=2000,  # Force concise outputs (was unlimited)
+            max_retry_limit=2,  # Reduced from 4
             allow_delegation=False,
             memory=False,
+            respect_context_window=True,  # Auto-truncate if needed
         )
 
     @task
