@@ -81,9 +81,14 @@ generation_lock = asyncio.Lock()
 # Keep strong references to all active tasks to prevent garbage collection
 active_tasks: set = set()
 
+# Deduplicate repeated prompt submissions that arrive close together
+prompt_submission_index: dict[str, dict[str, object]] = {}
+prompt_submission_lock = asyncio.Lock()
+
 # Configuration
 RATE_LIMIT_PER_24H = 5  # Max 5 generations per user per 24 hours
 TTL_HOURS = 24  # Results expire after 24 hours
+PROMPT_DEDUPE_WINDOW_MINUTES = 15
 
 
 def cleanup_generated_mvp_folder() -> None:
@@ -98,6 +103,31 @@ def cleanup_generated_mvp_folder() -> None:
         logger.info("[cleanup] Deleted GeneratedMVP after result save")
     except Exception as e:
         logger.warning(f"[cleanup] Failed to delete GeneratedMVP: {e}")
+
+
+def _normalize_prompt_value(value: str) -> str:
+    return " ".join(value.strip().lower().split())
+
+
+def _build_prompt_signature(user_id: str, prompt: str, project_name: str) -> str:
+    return "|".join(
+        [
+            _normalize_prompt_value(user_id),
+            _normalize_prompt_value(prompt),
+            _normalize_prompt_value(project_name),
+        ]
+    )
+
+
+def _purge_expired_prompt_submissions(now: datetime) -> None:
+    cutoff = now - timedelta(minutes=PROMPT_DEDUPE_WINDOW_MINUTES)
+    expired_signatures = [
+        signature
+        for signature, payload in prompt_submission_index.items()
+        if payload.get("created_at") and payload["created_at"] < cutoff
+    ]
+    for signature in expired_signatures:
+        prompt_submission_index.pop(signature, None)
 
 
 # ============================================================================
@@ -303,6 +333,7 @@ async def debug_state():
         "usage_tracker_count": len(usage_tracker),
         "usage_tracker_users": {user_id: len(timestamps) for user_id, timestamps in usage_tracker.items()},
         "active_tasks_count": len(active_tasks),
+        "prompt_submission_count": len(prompt_submission_index),
         "active_tasks_details": f"{len([t for t in active_tasks if not t.done()])} running, {len([t for t in active_tasks if t.done()])} done",
     }
 
@@ -335,23 +366,50 @@ async def submit_prompt(request: PromptRequest):
             status_code=429,
             detail=f"Rate limit exceeded. Maximum {RATE_LIMIT_PER_24H} generations per 24 hours",
         )
-    
-    # Generate unique project_id
-    project_id = str(uuid.uuid4())
-    logger.info(f"[/api/prompt] Generated project_id {project_id}")
-    
-    # Fire off background task without waiting (returns immediately)
-    task = asyncio.create_task(generate_mvp_task(user_id, project_id, prompt, project_name))
-    active_tasks.add(task)  # Keep strong reference to prevent garbage collection
-    logger.info(f"[/api/prompt] Fired background task for project {project_id}, active_tasks count: {len(active_tasks)}")
-    
+
+    signature = _build_prompt_signature(user_id, prompt, project_name)
+    now = datetime.now(timezone.utc)
+
+    async with prompt_submission_lock:
+        _purge_expired_prompt_submissions(now)
+
+        existing_submission = prompt_submission_index.get(signature)
+        if existing_submission:
+            existing_project_id = str(existing_submission.get("project_id", "")).strip()
+            existing_created_at = existing_submission.get("created_at")
+            if existing_project_id and isinstance(existing_created_at, datetime):
+                age = now - existing_created_at
+                if age <= timedelta(minutes=PROMPT_DEDUPE_WINDOW_MINUTES):
+                    logger.info(
+                        f"[/api/prompt] Duplicate submission detected for user {user_id}; "
+                        f"reusing project_id {existing_project_id}"
+                    )
+                    return PromptResponse(project_id=existing_project_id, status="queued")
+
+        # Generate unique project_id only for new submissions
+        project_id = str(uuid.uuid4())
+        logger.info(f"[/api/prompt] Generated project_id {project_id}")
+
+        prompt_submission_index[signature] = {
+            "project_id": project_id,
+            "created_at": now,
+        }
+
+        # Fire off background task without waiting (returns immediately)
+        task = asyncio.create_task(generate_mvp_task(user_id, project_id, prompt, project_name))
+        active_tasks.add(task)  # Keep strong reference to prevent garbage collection
+        logger.info(f"[/api/prompt] Fired background task for project {project_id}, active_tasks count: {len(active_tasks)}")
+
     return PromptResponse(project_id=project_id, status="queued")
 
 
 @app.post("/api/get-qr", response_model=QRResponse)
 async def get_qr_data(request: QRRequest):
     """
-    Retrieve the generated MVP data for a project_id.
+    Read-only QR lookup for a project_id.
+    This endpoint never creates a new project, never starts a new agent,
+    and never calls the generation pipeline.
+
     If completed, returns the data and deletes it from memory immediately.
     If still processing or not found, returns processing status.
     """
@@ -361,7 +419,7 @@ async def get_qr_data(request: QRRequest):
     if not project_id:
         raise HTTPException(status_code=400, detail="project_id is required")
     
-    # Check if result exists
+    # Read-only lookup only: no generation, no task creation, no agent startup.
     if project_id in results_dict:
         logger.info(f"[/api/get-qr] Found result for project {project_id}, retrieving and deleting")
         # Pop the result and remove it from memory

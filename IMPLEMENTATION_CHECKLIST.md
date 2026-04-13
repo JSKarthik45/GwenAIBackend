@@ -45,6 +45,7 @@
 - [x] If found: pops/deletes from `results_dict`
 - [x] If not found: returns `status: "processing"`
 - [x] Handles errors with error message in response
+- [x] Read-only: does not create new projects or start agents
 
 ### 7. CORS Configuration ✅
 - [x] `CORSMiddleware` configured

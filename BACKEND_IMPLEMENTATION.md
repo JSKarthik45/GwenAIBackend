@@ -102,6 +102,11 @@ TTL_HOURS = 24          # Results expire after 24 hours
 
 #### Endpoint: `POST /api/get-qr`
 
+**Read-only behavior**:
+- This endpoint does not create new projects.
+- This endpoint does not start agents.
+- It only looks up an existing `project_id` in memory.
+
 **Request**:
 ```json
 {
