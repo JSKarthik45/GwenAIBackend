@@ -12,6 +12,10 @@ BASE_OUTPUT = Path("D:/GwenAIBackend/GeneratedMVP/MyApp").resolve()
 DEPENDENCY_REGISTRY = BASE_OUTPUT / ".agent_dependency_registry.json"
 BOOTSTRAP_MARKER = BASE_OUTPUT / ".expo_bootstrapped"
 
+_DEPENDENCY_RENAMES = {
+    "@react-native-community/async-storage": "@react-native-async-storage/async-storage",
+}
+
 def set_base_output_path(app_folder: str) -> None:
     """Configure BASE_OUTPUT, DEPENDENCY_REGISTRY, and BOOTSTRAP_MARKER for a specific app folder.
     
@@ -93,9 +97,20 @@ def _read_dependency_registry() -> dict[str, list[str]]:
     if isinstance(dev_deps, dict):
         dev_deps = list(dev_deps.keys())
 
+    normalized_deps = {
+        _DEPENDENCY_RENAMES.get(str(item).strip(), str(item).strip())
+        for item in deps
+        if str(item).strip()
+    }
+    normalized_dev_deps = {
+        _DEPENDENCY_RENAMES.get(str(item).strip(), str(item).strip())
+        for item in dev_deps
+        if str(item).strip()
+    }
+
     normalized = {
-        "dependencies": sorted({str(item).strip() for item in deps if str(item).strip()}),
-        "devDependencies": sorted({str(item).strip() for item in dev_deps if str(item).strip()}),
+        "dependencies": sorted(normalized_deps),
+        "devDependencies": sorted(normalized_dev_deps),
     }
 
     # Self-heal malformed or legacy formats to keep subsequent runs stable.
@@ -185,6 +200,8 @@ class TrackDependencyTool(BaseTool):
         lib = library.strip()
         if not lib:
             return "ERROR: library is required."
+
+        lib = _DEPENDENCY_RENAMES.get(lib, lib)
 
         registry = _read_dependency_registry()
         current = set(registry.get(normalized_type, []))

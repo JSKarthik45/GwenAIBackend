@@ -224,6 +224,38 @@ def clean_default_src_files() -> None:
     print("✓ Default src files removed (JSX-only mode).")
 
 
+def _npm_install_with_fallback(npm_executable: str, cwd: Path, args: list[str]) -> tuple[bool, str]:
+    """Run npm install and fall back to legacy peer deps when resolver is too strict."""
+    primary = subprocess.run(
+        [npm_executable, "install", *args],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=600,
+    )
+    if primary.returncode == 0:
+        return True, ""
+
+    stderr = (primary.stderr or "").strip()
+    if "ERESOLVE" not in stderr:
+        return False, stderr
+
+    retry = subprocess.run(
+        [npm_executable, "install", "--legacy-peer-deps", *args],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=600,
+    )
+    if retry.returncode == 0:
+        print("⚠ npm install required --legacy-peer-deps fallback.")
+        return True, ""
+
+    return False, (retry.stderr or "").strip() or stderr
+
+
 def install_tracked_packages() -> None:
     """Install tracked dependencies using npm so package.json is updated by npm."""
     from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT, _read_dependency_registry
@@ -255,32 +287,14 @@ def install_tracked_packages() -> None:
         dev_deps = sorted({str(item).strip() for item in dev_deps if str(item).strip()})
 
         if deps:
-            cmd = [npm_executable, "install", *deps]
-            result = subprocess.run(
-                cmd,
-                cwd=str(TOOL_BASE_OUTPUT),
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=600,
-            )
-            if result.returncode != 0:
-                stderr = (result.stderr or "").strip()
+            ok, stderr = _npm_install_with_fallback(npm_executable, TOOL_BASE_OUTPUT, deps)
+            if not ok:
                 print(f"❌ npm install failed for dependencies: {stderr[:500]}")
                 return
 
         if dev_deps:
-            cmd = [npm_executable, "install", "-D", *dev_deps]
-            result = subprocess.run(
-                cmd,
-                cwd=str(TOOL_BASE_OUTPUT),
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=600,
-            )
-            if result.returncode != 0:
-                stderr = (result.stderr or "").strip()
+            ok, stderr = _npm_install_with_fallback(npm_executable, TOOL_BASE_OUTPUT, ["-D", *dev_deps])
+            if not ok:
                 print(f"❌ npm install failed for devDependencies: {stderr[:500]}")
                 return
 
