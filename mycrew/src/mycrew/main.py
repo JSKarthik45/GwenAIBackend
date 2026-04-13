@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+import os
 import platform
 import shutil
 import subprocess
@@ -18,6 +19,59 @@ from mycrew.tools.custom_tool import (
     set_base_output_path,
     remove_default_src_files,
 )
+
+
+def _find_executable(*names: str) -> str | None:
+    """Find an executable reliably across local/dev and containerized environments."""
+    candidates = [name for name in names if name]
+
+    for name in candidates:
+        resolved = shutil.which(name)
+        if resolved:
+            return resolved
+
+    common_paths = [
+        # Linux/container defaults
+        "/usr/local/bin/npm",
+        "/usr/bin/npm",
+        "/usr/local/bin/npx",
+        "/usr/bin/npx",
+        # Common Windows installs
+        r"C:\Program Files\nodejs\npm.cmd",
+        r"C:\Program Files\nodejs\npx.cmd",
+    ]
+    for path in common_paths:
+        file_name = Path(path).name.lower()
+        if file_name in {name.lower() for name in candidates} and Path(path).exists():
+            return path
+
+    probe_cmd = ["where", candidates[0]] if platform.system().lower().startswith("win") else ["which", candidates[0]]
+    try:
+        probe = subprocess.run(
+            probe_cmd,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        if probe.returncode == 0:
+            first_line = (probe.stdout or "").strip().splitlines()
+            if first_line:
+                return first_line[0].strip()
+    except Exception:
+        pass
+
+    return None
+
+
+def _resolve_node_tools() -> tuple[str | None, str | None]:
+    """Resolve npx and npm executables with PATH and non-PATH fallbacks."""
+    env_npx = os.getenv("NPX_EXECUTABLE", "").strip() or None
+    env_npm = os.getenv("NPM_EXECUTABLE", "").strip() or None
+
+    npx_executable = env_npx or _find_executable("npx", "npx.cmd")
+    npm_executable = env_npm or _find_executable("npm", "npm.cmd")
+    return npx_executable, npm_executable
 
 
 def _is_tool_call_payload_error(exc: Exception) -> bool:
@@ -118,18 +172,25 @@ def bootstrap_expo_directly() -> bool:
         return True
     
     print("📦 Bootstrapping Expo template...")
-    
-    if platform.system().lower().startswith("win"):
-        command = "npx create-expo-app@latest . --template blank@sdk-54 --yes"
-    else:
-        npx = shutil.which("npx") or shutil.which("npm")
-        if npx:
-            if "npx" in npx:
-                command = [npx, "create-expo-app@latest", ".", "--template", "blank@sdk-54", "--yes"]
-            else:
-                command = [npx, "exec", "create-expo-app@latest", "--", ".", "--template", "blank@sdk-54", "--yes"]
+
+    npx_executable, npm_executable = _resolve_node_tools()
+
+    is_windows = platform.system().lower().startswith("win")
+    if is_windows:
+        if npx_executable:
+            command = f'"{npx_executable}" create-expo-app@latest . --template blank@sdk-54 --yes'
+        elif npm_executable:
+            command = f'"{npm_executable}" exec create-expo-app@latest -- . --template blank@sdk-54 --yes'
         else:
-            print("❌ Could not find npx or npm in PATH.")
+            print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
+            return False
+    else:
+        if npx_executable:
+            command = [npx_executable, "create-expo-app@latest", ".", "--template", "blank@sdk-54", "--yes"]
+        elif npm_executable:
+            command = [npm_executable, "exec", "create-expo-app@latest", "--", ".", "--template", "blank@sdk-54", "--yes"]
+        else:
+            print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
             return False
 
     try:
@@ -182,9 +243,9 @@ def install_tracked_packages() -> None:
     try:
         registry = _read_dependency_registry()
 
-        npm_executable = shutil.which("npm.cmd") or shutil.which("npm")
+        _, npm_executable = _resolve_node_tools()
         if not npm_executable:
-            print("❌ npm executable not found in PATH.")
+            print(f"❌ npm executable not found. PATH={os.getenv('PATH', '')[:400]}")
             return
 
         deps = registry.get("dependencies", [])

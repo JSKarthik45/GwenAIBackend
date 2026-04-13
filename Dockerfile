@@ -1,5 +1,13 @@
 FROM python:3.10-slim
 
+# Install Node.js (includes npm/npx) required for Expo template bootstrap
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+	&& curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+	&& apt-get install -y --no-install-recommends nodejs \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user (Required by HF)
 RUN useradd -m -u 1000 user
 USER user
