@@ -4,9 +4,26 @@ mycrew/.venv/
 __pycache__
 **/__pycache__/
 
+# Python cache and tooling artifacts
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Expo local state
+**/.expo/
+
+# Local output/debug artifacts
+snack-output.txt
+*.log
+
 **/.DS_Store
 **/Thumbs.db
 
 .env
 
-GeneratedMVP
+GeneratedMVP/

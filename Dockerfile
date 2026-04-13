@@ -19,6 +19,10 @@ WORKDIR /app
 COPY --chown=user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install Node dependencies used by upload-to-snack.js
+COPY --chown=user package.json package-lock.json* ./
+RUN npm install --omit=dev
+
 # Copy the rest of your code
 COPY --chown=user . .
 

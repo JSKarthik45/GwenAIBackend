@@ -178,17 +178,17 @@ def bootstrap_expo_directly() -> bool:
     is_windows = platform.system().lower().startswith("win")
     if is_windows:
         if npx_executable:
-            command = f'"{npx_executable}" create-expo-app@latest . --template blank@sdk-54 --yes'
+            command = f'"{npx_executable}" create-expo-app@latest . --template blank@sdk-54 --yes --no-install'
         elif npm_executable:
-            command = f'"{npm_executable}" exec create-expo-app@latest -- . --template blank@sdk-54 --yes'
+            command = f'"{npm_executable}" exec create-expo-app@latest -- . --template blank@sdk-54 --yes --no-install'
         else:
             print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
             return False
     else:
         if npx_executable:
-            command = [npx_executable, "create-expo-app@latest", ".", "--template", "blank@sdk-54", "--yes"]
+            command = [npx_executable, "create-expo-app@latest", ".", "--template", "blank@sdk-54", "--yes", "--no-install"]
         elif npm_executable:
-            command = [npm_executable, "exec", "create-expo-app@latest", "--", ".", "--template", "blank@sdk-54", "--yes"]
+            command = [npm_executable, "exec", "create-expo-app@latest", "--", ".", "--template", "blank@sdk-54", "--yes", "--no-install"]
         else:
             print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
             return False
@@ -344,7 +344,8 @@ def run(content_prompt: str = "Create a Todo App") -> str:
     _run_crew_with_retries(inputs)
     
     # Step 6: Sync dependencies to package.json
-    install_tracked_packages()
+    # Skipped for Snack SDK-only flow.
+    # install_tracked_packages()
     
     print("\n✅ MVP app generation complete!")
     return "crew_completed"

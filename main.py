@@ -1,21 +1,39 @@
 import asyncio
+import json
 import logging
 import os
+import re
 import shutil
+import subprocess
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class UTF8JSONResponse(JSONResponse):
+    """JSON response that never ASCII-escapes unicode separators like '&'."""
+
+    def render(self, content) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
 
 # Make sure the mycrew package is importable when running from repo root
 _CREW_SRC = Path(__file__).resolve().parent / "mycrew" / "src"
@@ -39,6 +57,35 @@ def _to_json_safe(value):
     if isinstance(value, (list, tuple, set)):
         return [_to_json_safe(v) for v in value]
     return str(value)
+
+
+def _normalize_qr_url(url: str) -> str:
+    """Normalize escaped separators in QR URLs (e.g. \u0026 or %5Cu0026)."""
+    if not isinstance(url, str):
+        return url
+
+    normalized = url.strip()
+    normalized = normalized.replace("%5Cu0026", "&")
+    normalized = normalized.replace("\\u0026", "&")
+    normalized = normalized.replace("u0026", "&") if "?size=" in normalized and "data=" not in normalized else normalized
+    return normalized
+
+
+def _build_qr_url_from_snack_url(snack_url: str) -> str:
+    """Build QR URL from snack URL using a single canonical server-side format."""
+    normalized_snack_url = _normalize_qr_url(snack_url)
+    return f"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={quote(normalized_snack_url, safe='')}"
+
+
+def _deep_normalize_response_strings(value):
+    """Recursively normalize escaped URL separators in nested response payloads."""
+    if isinstance(value, str):
+        return _normalize_qr_url(value)
+    if isinstance(value, dict):
+        return {k: _deep_normalize_response_strings(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_deep_normalize_response_strings(v) for v in value]
+    return value
 
 
 def _serialize_crew_output(result) -> dict:
@@ -107,21 +154,108 @@ def cleanup_generated_mvp_folder() -> None:
 
 def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
     """
-    Placeholder QR generation function.
-    Later, this will be replaced with a real function that sends the app to Expo Snack
-    and generates an actual QR code.
+    Generate real Expo Snack QR code by calling the upload-to-snack.js Node script.
     
-    For now, returns a placeholder QR code data.
+    The script uses the Snack SDK to:
+    1. Validate the generated app
+    2. Resolve dependencies
+    3. Upload to Expo Snack servers
+    4. Return a working QR code
+    
+    Returns:
+        dict: Contains snack_id, snack_url, qr_image_url, and other Snack metadata
     """
-    logger.info(f"[QR Gen] Generating placeholder QR for project {project_id}")
-    # Placeholder: will be replaced with actual Expo Snack integration
-    qr_data = {
-        "qr_code": "placeholder_qr_code_data",
-        "snack_url": "https://snack.expo.dev",
-        "project_id": project_id,
-    }
-    logger.info(f"[QR Gen] Placeholder QR generated for project {project_id}")
-    return qr_data
+    logger.info(f"[QR Gen] Generating real Expo Snack QR for project {project_id}")
+    
+    try:
+        # Build the full path to the app directory
+        app_dir = Path(__file__).resolve().parent / output_path
+        
+        if not app_dir.exists():
+            logger.error(f"[QR Gen] App directory does not exist: {app_dir}")
+            raise FileNotFoundError(f"App directory not found: {app_dir}")
+        
+        # Call the Node upload-to-snack.js script
+        script_path = Path(__file__).resolve().parent / "upload-to-snack.js"
+        logger.info(f"[QR Gen] Calling Node script: {script_path} with app dir: {app_dir}")
+        
+        result = subprocess.run(
+            ["node", str(script_path), str(app_dir)],
+            capture_output=True,
+            text=False,
+            timeout=60  # 60 second timeout for Snack SDK operations
+        )
+
+        # Decode as UTF-8 with replacement so Windows cp1252 doesn't crash on UTF-8 symbols.
+        stdout_text = (result.stdout or b"").decode("utf-8", errors="replace")
+        stderr_text = (result.stderr or b"").decode("utf-8", errors="replace")
+        
+        if result.returncode != 0:
+            error_msg = stderr_text or stdout_text or "Unknown Node script error"
+            logger.error(f"[QR Gen] Node script failed: {error_msg}")
+            raise RuntimeError(f"upload-to-snack.js failed: {error_msg}")
+        
+        logger.info(f"[QR Gen] Node script output:\n{stdout_text}")
+        
+        # Parse output defensively from full text.
+        output_text = stdout_text.strip()
+        output_lines = [line.strip() for line in output_text.splitlines() if line.strip()]
+
+        snack_id = None
+        snack_url = None
+        qr_url = None
+
+        for line in output_lines:
+            if line.startswith("snackId:"):
+                snack_id = line.split("snackId:", 1)[1].strip()
+                continue
+
+            if line.startswith("http") or line.startswith("exp://"):
+                if "qrserver.com" in line:
+                    qr_url = line
+                elif "expo.dev" in line or "u.expo.dev" in line or line.startswith("exp://"):
+                    snack_url = line
+
+        # Fallback regex extraction in case line-based parsing misses format changes.
+        if not snack_id:
+            match = re.search(r"snackId:\s*([A-Za-z0-9_-]+)", output_text)
+            if match:
+                snack_id = match.group(1)
+
+        if not snack_url:
+            match = re.search(r"(exp://[^\s]+|https://(?:snack|u)\.expo\.dev/[^\s]+)", output_text)
+            if match:
+                snack_url = match.group(1)
+
+        if not qr_url:
+            match = re.search(r"(https://api\.qrserver\.com/[^\s]+)", output_text)
+            if match:
+                qr_url = match.group(1)
+        
+        if not snack_id or not snack_url:
+            logger.error(f"[QR Gen] Could not parse Node script output. snack_id={snack_id}, snack_url={snack_url}, qr_url={qr_url}")
+            raise ValueError("Failed to extract Snack data from Node script output")
+
+        # Canonicalize server-side QR URL so API always returns one deterministic format.
+        qr_url = _build_qr_url_from_snack_url(snack_url)
+        
+        qr_data = {
+            "qr_code": _normalize_qr_url(qr_url),
+            "snack_id": snack_id,
+            "snack_url": _normalize_qr_url(snack_url),
+            "qr_image_url": _normalize_qr_url(qr_url),
+            "project_id": project_id,
+        }
+        
+        logger.info(f"[QR Gen] ✅ Real Snack QR generated: snackId={snack_id}, qrUrl={qr_url}")
+        return qr_data
+        
+    except subprocess.TimeoutExpired:
+        logger.error(f"[QR Gen] Node script timed out after 60 seconds")
+        raise RuntimeError("Snack upload timed out - bundle validation took too long")
+    except Exception as e:
+        logger.error(f"[QR Gen] Failed to generate Snack QR: {str(e)}", exc_info=True)
+        raise RuntimeError(f"Snack QR generation failed: {str(e)}")
 
 
 def _normalize_prompt_value(value: str) -> str:
@@ -228,7 +362,6 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 results_dict[project_id]["data"]["status"] = "completed"
                 logger.info(f"[Task {project_id}] ✅ QR generated and status set to completed")
                 
-                # Cleanup GeneratedMVP folder now that QR is generated
                 cleanup_generated_mvp_folder()
                 
                 # Update user's usage tracker
@@ -248,7 +381,6 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 }
                 logger.info(f"[Task {project_id}] Stored error in results_dict")
                 # Error state (do not set to completed)
-                # Cleanup GeneratedMVP folder even on error
                 cleanup_generated_mvp_folder()
     except Exception as outer_e:
         logger.error(f"[Task {project_id}] Outer exception: {str(outer_e)}", exc_info=True)
@@ -294,7 +426,7 @@ async def cleanup_old_results():
 # FASTAPI APP SETUP
 # ============================================================================
 
-app = FastAPI(title="GwenAI MVP Generator Backend")
+app = FastAPI(title="GwenAI MVP Generator Backend", default_response_class=UTF8JSONResponse)
 
 # Configure CORS for all origins
 app.add_middleware(
@@ -474,11 +606,23 @@ async def get_qr_data(request: QRRequest):
                 logger.info(f"[/api/get-qr] Project {project_id} completed successfully (QR generated)")
                 # Pop the result and remove it from memory
                 popped_entry = results_dict.pop(project_id)
-                return QRResponse(
-                    status="completed",
-                    data=popped_entry.get("data"),
-                    error=None,
-                )
+                popped_data = popped_entry.get("data") if isinstance(popped_entry, dict) else None
+                if isinstance(popped_data, dict):
+                    qr_blob = popped_data.get("qr_code")
+                    if isinstance(qr_blob, dict):
+                        if isinstance(qr_blob.get("qr_code"), str):
+                            qr_blob["qr_code"] = _normalize_qr_url(qr_blob["qr_code"])
+                        if isinstance(qr_blob.get("qr_image_url"), str):
+                            qr_blob["qr_image_url"] = _normalize_qr_url(qr_blob["qr_image_url"])
+                popped_data = _deep_normalize_response_strings(popped_data)
+                payload = {
+                    "status": "completed",
+                    "data": popped_data,
+                    "error": None,
+                }
+                raw_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+                raw_json = raw_json.replace("\\u0026", "&").replace("%5Cu0026", "&")
+                return Response(content=raw_json.encode("utf-8"), media_type="application/json")
             else:
                 # App generated but QR generation not yet done
                 logger.info(f"[/api/get-qr] Project {project_id} app generated, waiting for QR generation (status={internal_status})")
