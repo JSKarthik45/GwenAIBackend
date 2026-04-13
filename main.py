@@ -168,12 +168,45 @@ def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
     logger.info(f"[QR Gen] Generating real Expo Snack QR for project {project_id}")
     
     try:
-        # Build the full path to the app directory
-        app_dir = Path(__file__).resolve().parent / output_path
-        
-        if not app_dir.exists():
-            logger.error(f"[QR Gen] App directory does not exist: {app_dir}")
-            raise FileNotFoundError(f"App directory not found: {app_dir}")
+        # Build candidate paths for the app directory. The generator may write
+        # files either relative to the repository root (GeneratedMVP/...) or
+        # under the runtime tool's BASE_OUTPUT (mycrew.tools.custom_tool.BASE_OUTPUT).
+        candidates: list[Path] = []
+
+        # 1) If output_path is absolute, prefer that first.
+        try:
+            out_p = Path(output_path)
+            if out_p.is_absolute():
+                candidates.append(out_p.resolve())
+        except Exception:
+            pass
+
+        # 2) Repo-relative path (what we used historically).
+        repo_relative = Path(__file__).resolve().parent / output_path
+        candidates.append(repo_relative.resolve())
+
+        # 3) If the crew tools configured a BASE_OUTPUT, try that as well.
+        try:
+            from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT
+
+            # TOOL_BASE_OUTPUT may already point to the app folder (e.g. .../GeneratedMVP/MyApp)
+            candidates.append(Path(TOOL_BASE_OUTPUT).resolve())
+        except Exception:
+            # If import fails or attribute missing, continue with other candidates.
+            pass
+
+        # Try each candidate and pick the first that exists.
+        app_dir: Path | None = None
+        tried = []
+        for candidate in candidates:
+            tried.append(str(candidate))
+            if candidate.exists():
+                app_dir = candidate
+                break
+
+        if app_dir is None:
+            logger.error(f"[QR Gen] App directory does not exist. Tried: {tried}")
+            raise FileNotFoundError(f"App directory not found. Tried: {tried}")
         
         # Call the Node upload-to-snack.js script
         script_path = Path(__file__).resolve().parent / "upload-to-snack.js"
