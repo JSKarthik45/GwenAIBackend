@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import shutil
 import sys
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -85,6 +86,20 @@ RATE_LIMIT_PER_24H = 5  # Max 5 generations per user per 24 hours
 TTL_HOURS = 24  # Results expire after 24 hours
 
 
+def cleanup_generated_mvp_folder() -> None:
+    """Delete GeneratedMVP folder after result persistence to free disk space."""
+    output_dir = Path(__file__).resolve().parent / "GeneratedMVP"
+    if not output_dir.exists():
+        logger.info("[cleanup] GeneratedMVP does not exist; skipping delete")
+        return
+
+    try:
+        shutil.rmtree(output_dir)
+        logger.info("[cleanup] Deleted GeneratedMVP after result save")
+    except Exception as e:
+        logger.warning(f"[cleanup] Failed to delete GeneratedMVP: {e}")
+
+
 # ============================================================================
 # RATE LIMITER
 # ============================================================================
@@ -155,6 +170,7 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 }
                 logger.info(f"[Task {project_id}] ✅ SAVED to results_dict. Total entries: {len(results_dict)}")
                 logger.info(f"[Task {project_id}] results_dict keys: {list(results_dict.keys())}")
+                cleanup_generated_mvp_folder()
                 
                 # Update user's usage tracker
                 if user_id not in usage_tracker:
@@ -172,6 +188,7 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                     "created_at": now,
                 }
                 logger.info(f"[Task {project_id}] Stored error in results_dict")
+                cleanup_generated_mvp_folder()
     except Exception as outer_e:
         logger.error(f"[Task {project_id}] Outer exception: {str(outer_e)}", exc_info=True)
     finally:
