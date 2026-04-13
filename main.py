@@ -105,6 +105,25 @@ def cleanup_generated_mvp_folder() -> None:
         logger.warning(f"[cleanup] Failed to delete GeneratedMVP: {e}")
 
 
+def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
+    """
+    Placeholder QR generation function.
+    Later, this will be replaced with a real function that sends the app to Expo Snack
+    and generates an actual QR code.
+    
+    For now, returns a placeholder QR code data.
+    """
+    logger.info(f"[QR Gen] Generating placeholder QR for project {project_id}")
+    # Placeholder: will be replaced with actual Expo Snack integration
+    qr_data = {
+        "qr_code": "placeholder_qr_code_data",
+        "snack_url": "https://snack.expo.dev",
+        "project_id": project_id,
+    }
+    logger.info(f"[QR Gen] Placeholder QR generated for project {project_id}")
+    return qr_data
+
+
 def _normalize_prompt_value(value: str) -> str:
     return " ".join(value.strip().lower().split())
 
@@ -186,7 +205,7 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 result = await asyncio.to_thread(run_crew_sync)
                 logger.info(f"[Task {project_id}] Thread completed, saving result")
                 
-                # Save real crew result to in-memory storage
+                # Save real crew result to in-memory storage with app_generated status
                 now = datetime.now(timezone.utc)
                 results_dict[project_id] = {
                     "data": {
@@ -195,11 +214,21 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                         "completed_at": now.isoformat(),
                         "generator_status": _to_json_safe(result),
                         "output_path": "GeneratedMVP/MyApp",
+                        "status": "app_generated",  # Not yet completed, waiting for QR generation
                     },
                     "created_at": now,
                 }
-                logger.info(f"[Task {project_id}] ✅ SAVED to results_dict. Total entries: {len(results_dict)}")
+                logger.info(f"[Task {project_id}] ✅ SAVED to results_dict with status=app_generated. Total entries: {len(results_dict)}")
                 logger.info(f"[Task {project_id}] results_dict keys: {list(results_dict.keys())}")
+                
+                # Generate placeholder QR code (later: replace with real Expo Snack integration)
+                qr_data = _generate_qr_placeholder(project_id, "GeneratedMVP/MyApp")
+                results_dict[project_id]["data"]["qr_code"] = qr_data
+                # Mark as completed only after QR generation is done
+                results_dict[project_id]["data"]["status"] = "completed"
+                logger.info(f"[Task {project_id}] ✅ QR generated and status set to completed")
+                
+                # Cleanup GeneratedMVP folder now that QR is generated
                 cleanup_generated_mvp_folder()
                 
                 # Update user's usage tracker
@@ -218,6 +247,8 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                     "created_at": now,
                 }
                 logger.info(f"[Task {project_id}] Stored error in results_dict")
+                # Error state (do not set to completed)
+                # Cleanup GeneratedMVP folder even on error
                 cleanup_generated_mvp_folder()
     except Exception as outer_e:
         logger.error(f"[Task {project_id}] Outer exception: {str(outer_e)}", exc_info=True)
@@ -421,25 +452,41 @@ async def get_qr_data(request: QRRequest):
     
     # Read-only lookup only: no generation, no task creation, no agent startup.
     if project_id in results_dict:
-        logger.info(f"[/api/get-qr] Found result for project {project_id}, retrieving and deleting")
-        # Pop the result and remove it from memory
-        result_data = results_dict.pop(project_id)
+        logger.info(f"[/api/get-qr] Found result for project {project_id}")
+        result_entry = results_dict[project_id]
+        result_data = result_entry.get("data")
         
-        # Return the data or error
-        if result_data.get("error"):
-            logger.error(f"[/api/get-qr] Project {project_id} has error: {result_data['error']}")
+        # Check for error at top level
+        if result_entry.get("error"):
+            logger.error(f"[/api/get-qr] Project {project_id} has error: {result_entry['error']}")
+            # Pop the result and remove it from memory
+            results_dict.pop(project_id)
             return QRResponse(
                 status="error",
                 data=None,
-                error=result_data["error"],
+                error=result_entry["error"],
             )
+        
+        # Data exists, check internal status
+        if result_data and isinstance(result_data, dict):
+            internal_status = result_data.get("status", "unknown")
+            if internal_status == "completed":
+                logger.info(f"[/api/get-qr] Project {project_id} completed successfully (QR generated)")
+                # Pop the result and remove it from memory
+                popped_entry = results_dict.pop(project_id)
+                return QRResponse(
+                    status="completed",
+                    data=popped_entry.get("data"),
+                    error=None,
+                )
+            else:
+                # App generated but QR generation not yet done
+                logger.info(f"[/api/get-qr] Project {project_id} app generated, waiting for QR generation (status={internal_status})")
+                return QRResponse(status="processing", data=None, error=None)
         else:
-            logger.info(f"[/api/get-qr] Project {project_id} completed successfully")
-            return QRResponse(
-                status="completed",
-                data=result_data.get("data"),
-                error=None,
-            )
+            # Data is None or not a dict
+            logger.warning(f"[/api/get-qr] Project {project_id} has unexpected data structure")
+            return QRResponse(status="processing", data=None, error=None)
     else:
         # Still processing or not found
         logger.info(f"[/api/get-qr] Project {project_id} not found in results_dict (still processing)")
