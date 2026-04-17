@@ -21,23 +21,29 @@ design_architecture:
     - Prefer one main file + up to 2 tiny reusable components
     - No navigation folders/routes/tabs/stacks unless explicitly required
     - No Redux/MobX/Zustand/sagas or complex patterns
-    - Default to zero external libraries
-    - If an external library is unavoidable, list it explicitly with one short reason
+    - CRITICAL: ONLY use these modules (anything else will cause import errors):
+      * react
+      * react-native (standard exports: View, Text, StyleSheet, Button, TextInput, ScrollView, etc.)
+      * NO other external packages unless absolutely critical to app functionality
     REQUIRED OUTPUT FORMAT:
     architecture_summary: <short paragraph>
-    external_dependencies: <list, empty if none>
+    external_dependencies: <list, MUST BE EMPTY or have only explicitly justified packages>
     files:
-      - path: (CRITICAL: App.js goes to ROOT; utility files go to src/ComponentName.js)
+      - path: (CRITICAL: App.js at ROOT; utility files at src/ComponentName.js)
         purpose:
         exports:
         state_props:
         handlers:
-        allowed_imports:
-    allowed_imports is authoritative and will be used as a strict contract by implementation.
+        allowed_imports: (CRITICAL: ONLY list imports available in Expo SDK 54)
+    VALIDATION:
+      - allowed_imports MUST include react and react-native
+      - allowed_imports MUST NOT include: expo/storage, expo/filesystem, expo-sqlite, react-navigation
+      - allowed_imports MUST NOT include modules starting with @react-native- (deprecated pattern)
+      - If external dependency needed, justify with single reason
   expected_output: >
     Strict architecture blueprint with App.js at root,
-    explicit per-file allowed_imports, and empty/minimal external_dependencies.
-    Path examples: "App.js" (root), "src/TodoItem.js" (under src).
+    explicit per-file allowed_imports (ONLY react/react-native),
+    and EMPTY external_dependencies list.
   agent: architect
   context: [plan_requirements]
 
@@ -49,20 +55,24 @@ implement_mvp_features:
     - JSX only (no TypeScript/TSX)
     - App.js MUST be written to the ROOT directory, not src/
     - Other components go to src/ as specified in architecture
-    - For each file, use ONLY imports listed in that file's allowed_imports
-    - Do not add navigation setup or extra screens unless architecture explicitly includes them
+    - CRITICAL: For each file, use ONLY imports listed in that file's allowed_imports.
+      VALIDATION: Before writing code, verify every import is in allowed_imports.
+      FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation, any @react-native-*
+    - Do not add features, navigation setup, or extra screens unless architecture explicitly includes them
     - Keep each file concise and Expo Go compatible
-    - No placeholders, no TODOs
+    - No placeholders, no TODOs, no explanations
     Tool usage:
     1) Use file_writer for one file at a time
-    2) For path "App.js" write to root; for path "src/X.js" write to X under src/
+    2) For path "App.js" write to root; for path "src/X.js" write under src/
     3) Use file_reader only when required
-    4) Use track_dependency ONLY for packages in architecture.external_dependencies
-    5) Do not output full code in normal chat text
+    4) Use track_dependency ONLY if architecture.external_dependencies is non-empty
+    5) Do NOT output full code in normal chat text
+    6) CRITICAL: Verify no imports outside allowed_imports before writing each file
     Final response after all tool calls must be exactly: DONE
   expected_output: >
     Implemented files match architecture exactly: App.js at root + utility files under src/,
-    imports follow per-file allowlists, dependencies tracked only if explicitly approved,
+    imports STRICTLY follow per-file allowlists (no unauthorized modules),
+    dependencies tracked only if in architecture.external_dependencies,
     final response exactly DONE.
   agent: feature_builder
   context: [design_architecture]
