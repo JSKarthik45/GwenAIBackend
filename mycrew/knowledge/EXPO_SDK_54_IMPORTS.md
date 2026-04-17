@@ -31,7 +31,7 @@ import {
   TouchableWithoutFeedback,
   Pressable,
   Modal,
-  Alert,
+
   Image,
   ActivityIndicator,
   SafeAreaView,
@@ -132,10 +132,10 @@ export default function App() {
   const handleAddItem = useCallback((newItem) => {
     // Process and validate (10-15 lines)
     setItems([...items, newItem]);
-  }, [items]);
-  
-  const handleDeleteItem = useCallback((id) => {
-    // (5-10 lines)
+  import { AsyncStorage } from 'react-native'; // WRONG - AsyncStorage removed many versions ago
+  import StorageAPI from 'expo/storage'; // WRONG - expo/storage DOES NOT EXIST (hallucination)
+  import AsyncStorage from 'expo-async-storage'; // WRONG - does not exist
+  import { SQLite } from 'expo-sqlite'; // WRONG - Not available in Expo Go
     setItems(items.filter(item => item.id !== id));
   }, [items]);
   
@@ -172,14 +172,8 @@ import {
   FlatList,
   View,
   StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
 import ItemCard from './ItemCard';
-
-export default function ItemList({ items, onDelete, onFilter }) {
   const renderItem = useCallback(({ item }) => (
-    <TouchableOpacity onPress={() => onDelete(item.id)}>
-      <ItemCard item={item} />
     </TouchableOpacity>
   ), [onDelete]);
   
@@ -189,12 +183,19 @@ export default function ItemList({ items, onDelete, onFilter }) {
         data={items}
         renderItem={renderItem}
         keyExtractor={item => item.id.toString()}
+  **SCOPE**: Single-screen Expo app (NO navigation, 5-7 files, 150-400 lines per file)  
+  **CORE ALLOWED**: `react`, `react-native` standard exports, local state via hooks  
+  **EXCEPTION**: `@react-native-async-storage/async-storage` in `src/utils/storage.js` ONLY (if persistence needed)  
+  **FORBIDDEN**: Any other external packages, navigation, @react-native-*, expo/storage (doesn't exist)
         scrollEnabled
         nestedScrollEnabled
       />
     </View>
   );
-}
+    └─ src/utils/
+      ├─ storage.js (if persistence needed, with AsyncStorage logic)
+      ├─ helpers.js (logic, formatting, validation)
+      └─ constants.js (colors, strings, defaults)
 
 const styles = StyleSheet.create({
   // (~50 lines of styling)
@@ -204,15 +205,20 @@ const styles = StyleSheet.create({
 **Helper utilities** (100-150 lines):
 ```javascript
 // src/utils/helpers.js
+  - ✅ Persistent storage (if needed) isolated in src/utils/storage.js
 export const filterByCategory = (items, category) => {
   // Filter logic (20 lines)
 };
+      - Storage/persistence → Use @react-native-async-storage/async-storage in src/utils/storage.js ONLY
 
 export const sortItems = (items, sortBy) => {
   // Sort logic (20 lines)
+        External APIs/backend → Out of scope. Local data + optional persistence via async-storage.
 };
+  **Critical Anti-Pattern**: Never use `expo/storage` or `expo/filesystem` - these modules DO NOT EXIST.  
+  If an agent suggests them, it's hallucinating. Use `@react-native-async-storage/async-storage` instead.
 
-export const validateItem = (item) => {
+  *Last Updated: April 2026 for Expo SDK 54 — Fixed hallucination of non-existent modules*
   // Validation (15 lines)
 };
 

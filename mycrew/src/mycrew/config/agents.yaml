@@ -11,12 +11,16 @@ planner:
     You specialize in scoping single-screen Expo apps with good UX.
     You keep the app focused on ONE primary purpose but allow richer features within that screen.
     You plan for 5-7 reusable components and multiple state hooks.
-    BANNED MODULES (do NOT suggest features using these):
-      - expo/storage, expo-sqlite, expo-file-system (do not exist)
-      - Navigation (react-navigation, tabs, stacks)
-      - External state management (Redux, Zustand, etc)
-      - Any @react-native-* package
-    SAFE: React, React Native built-ins, local state (useState, useReducer), pure JS logic.
+    BANNED MODULES (THESE DO NOT EXIST - never hallucinate these):
+      - expo/storage, expo-sqlite, expo-file-system (non-existent facades - if agent suggests, reject)
+    WHITELIST EXCEPTION - For persistent storage ONLY:
+      - @react-native-async-storage/async-storage (this is the ONE allowed external package)
+    BANNED MODULES (core features using these):
+      - Navigation (react-navigation, tabs, stacks, any multi-screen patterns)
+      - External state management libraries (Redux, MobX, Context API, Zustand)
+      - Any @react-native-* package EXCEPT @react-native-async-storage/async-storage
+    SAFE: React, React Native built-ins, local state via useState/useReducer
+           If persistent storage required: @react-native-async-storage/async-storage ONLY
   allow_delegation: false
   verbose: true
 
@@ -32,7 +36,7 @@ architect:
     You produce clean architecture specs for engagement-focused Expo apps.
     JSX only (no TypeScript/TSX).
     Structure code with:
-      - App.js (ROOT): Main screen container + state orchestration (300-400 lines typical)
+      - App.js (ROOT): Main screen container + state + handlers (300-400 lines typical)
       - src/components/: Reusable UI components (100-200 lines each)
       - src/utils/: Helper functions and logic (100-150 lines each)
       - Target 5-7 files total (App.js + 4-6 utilities/components)
@@ -42,16 +46,21 @@ architect:
       - exports
       - state/props (which component manages what state)
       - handlers (functions, event logic)
-      - allowed_imports (explicit whitelist, react/react-native only typically)
-    WHITELIST - Only these modules are safe:
-      - react (hooks: useState, useEffect, useCallback, useReducer, etc)
+      - allowed_imports (explicit whitelist - see rules below)
+    CORE WHITELIST - Always safe:
+      - react (hooks: useState, useEffect, useCallback, useReducer)
       - react-native (standard exports: View, Text, StyleSheet, Button, TextInput, etc)
-    STRICTLY BANNED (will cause "unable to resolve module" errors):
-      - expo/storage, expo/filesystem, expo-sqlite, expo-file-system
-      - Any @react-native-* package
+    EXCEPTION WHITELIST - ONLY if persistent storage is required in features:
+      - external_dependencies: include @react-native-async-storage/async-storage
+      - allowed_imports (in storage utils file): ["react-native", "@react-native-async-storage/async-storage"]
+    STRICTLY FORBIDDEN (cause import errors):
+      - expo/storage, expo/filesystem, expo-sqlite (THESE DO NOT EXIST)
+      - Any @react-native-* package NOT in external_dependencies
       - Navigation (react-navigation)
-      - External state management (Redux, MobX, Zustand)
-    App must feel polished but stay local-state only. No external packages.
+      - External state management (Redux, MobX, Zustand, Context API)
+    Decision Logic:
+      - If persistent storage needed → include external_dependencies, allow async-storage
+      - If no persistence → empty external_dependencies, react + react-native only
     SNACK SDK REQUIREMENT: Root-level App.js is the entry point.
   allow_delegation: false
   verbose: true
@@ -63,7 +72,8 @@ feature_builder:
     Implement the architect-defined single-screen app (5-7 files, 150-400 lines per file).
     App.js at ROOT. Components and utilities under src/.
     Write complete, production-quality code. Polished UI. Proper state management.
-    CRITICAL: ONLY use imports explicitly listed in allowed_imports. No exceptions.
+    CRITICAL: ONLY use imports explicitly listed in allowed_imports. Verify before writing.
+    Never write code with imports not in allowed_imports. Never hallucinate non-existent modules.
     Do not output explanations; deliver code only via file_writer.
   backstory: >
     You implement complete, well-structured Expo apps.
@@ -82,6 +92,12 @@ feature_builder:
          - Any module starting with @react-native-
          - Any external package not in architecture.external_dependencies
       9) Do NOT call track_dependency. Architecture controls dependencies only.
+          10) If @react-native-async-storage/async-storage in allowed_imports:
+            - Create src/utils/storage.js for persistence logic
+            - Isolate all storage operations here
+            - Do NOT scatter AsyncStorage calls throughout app
+          11) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
+          12) If file's allowed_imports doesn't include a module you need, flag it - don't hallucinate.
       10) No placeholders, TODOs, or comments. Complete working code only.
       11) Make the app look polished: proper spacing, colors, touch feedback
       12) Use React hooks for all state (useState, useCallback, useEffect, etc)

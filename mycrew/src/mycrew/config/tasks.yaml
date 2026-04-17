@@ -26,7 +26,7 @@ design_architecture:
     - CRITICAL: ONLY use react and react-native modules
     REQUIRED OUTPUT FORMAT:
     architecture_summary: <description of the single-screen app>
-    external_dependencies: (MUST BE EMPTY - no external packages for this architecture)
+    external_dependencies: (EMPTY unless persistent storage required, then ONLY @react-native-async-storage/async-storage)
     files:
       - path: (App.js at ROOT; components at src/components/X.js; utils at src/utils/X.js)
         purpose: (clear description)
@@ -34,11 +34,12 @@ design_architecture:
         exports:
         state/hooks: (which useState/hooks this file uses)
         handlers:
-        allowed_imports: (ONLY react and/or react-native)
+        allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
     VALIDATION:
-      - allowed_imports MUST only contain: "react", "react-native"
-      - NO external_dependencies
-      - NO navigation, NO @react-native-* packages, NO expo/storage
+      - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
+      - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
+      - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
+      - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
       - 5-7 files total
   expected_output: >
     Complete architecture blueprint with 5-7 files, proper code organization,
@@ -60,7 +61,9 @@ implement_mvp_features:
     - NO skeleton code or TODOs. Everything must work as written.
     - CRITICAL: For each file, use ONLY imports in allowed_imports.
       Before writing each file, verify every import is whitelisted.
-      FORBIDDEN: expo/storage, expo-sqlite, react-navigation, @react-native-*
+      FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
+      ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
+      RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for state
     - Proper styling (StyleSheet), event handlers, UI polish
     - Do not add features beyond architecture
@@ -68,12 +71,15 @@ implement_mvp_features:
     1) Use file_writer for one file at a time (write substantial code per file)
     2) For path "App.js" write to root; for path "src/*" write to that location
     3) Use file_reader only if needed
-    4) Do NOT call track_dependency (architecture.external_dependencies is empty)
+    4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
     5) Do not output code in chat; only use file_writer
+      6) CRITICAL: Validate every import against allowed_imports before writing code
+      7) If persistent storage used, create src/utils/storage.js with all AsyncStorage logic
     Final response after all tool calls: DONE
   expected_output: >
     Implemented 5-7 files: App.js at root with main state/UI (300-400 lines),
     supporting components and utilities (100-250 lines each), all imports verified,
+      external_dependencies honored (empty or just async-storage),
     no external dependencies, production-quality working code, final response DONE.
   agent: feature_builder
   context: [design_architecture]
