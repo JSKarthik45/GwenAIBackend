@@ -88,46 +88,139 @@ import {
 
 ## 📋 Valid Architecture Patterns
 
-### Single File MVP
+### Complex Single-Screen App (5-7 files)
+
+```
+App.js (ROOT, 300-400 lines)
+  - Main screen container, orchestrates all state
+  - Renders component tree
+  
+src/components/
+  - Header.js (100-150 lines) - App header with title/controls
+  - InputForm.js (150-200 lines) - User input section
+  - ItemList.js (150-200 lines) - Display filtered/styled list
+  - ItemCard.js (100-150 lines) - Individual list item component
+  
+src/utils/
+  - helpers.js (100-150 lines) - Filter, sort, format functions
+  - constants.js (50-100 lines) - Colors, strings, defaults
+```
+
+**Typical App.js structure** (300-400 lines):
 ```javascript
-// App.js (at ROOT)
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback, useReducer } from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
+import Header from './src/components/Header';
+import InputForm from './src/components/InputForm';
+import ItemList from './src/components/ItemList';
+import { processItems, filterByCategory } from './src/utils/helpers';
 
 export default function App() {
-  const [count, setCount] = useState(0);
+  // Multiple state pieces
+  const [items, setItems] = useState([]);
+  const [filter, setFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('date');
+  const [showInput, setShowInput] = useState(false);
+  
+  // Derived state/memoization
+  const filteredItems = useCallback(() => {
+    // Filter and sort logic (20-30 lines)
+    return filterByCategory(items, filter);
+  }, [items, filter]);
+  
+  // Multiple event handlers
+  const handleAddItem = useCallback((newItem) => {
+    // Process and validate (10-15 lines)
+    setItems([...items, newItem]);
+  }, [items]);
+  
+  const handleDeleteItem = useCallback((id) => {
+    // (5-10 lines)
+    setItems(items.filter(item => item.id !== id));
+  }, [items]);
+  
+  // Effects
+  useEffect(() => {
+    // Side effects (10-20 lines)
+  }, [filter]);
+  
+  return (
+    <SafeAreaView style={styles.container}>
+      <Header title="My App" />
+      {showInput && <InputForm onAdd={handleAddItem} />}
+      <ItemList 
+        items={filteredItems()} 
+        onDelete={handleDeleteItem}
+        onFilter={setFilter}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  // Extensive styling (30-50 lines)
+  container: { flex: 1, backgroundColor: '#fff' },
+  // ... more styles ...
+});
+```
+
+**Component example** (150-200 lines):
+```javascript
+// src/components/ItemList.js
+import React, { useCallback } from 'react';
+import {
+  FlatList,
+  View,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
+import ItemCard from './ItemCard';
+
+export default function ItemList({ items, onDelete, onFilter }) {
+  const renderItem = useCallback(({ item }) => (
+    <TouchableOpacity onPress={() => onDelete(item.id)}>
+      <ItemCard item={item} />
+    </TouchableOpacity>
+  ), [onDelete]);
   
   return (
     <View style={styles.container}>
-      <Text>Count: {count}</Text>
-      <Button title="Increment" onPress={() => setCount(count + 1)} />
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        scrollEnabled
+        nestedScrollEnabled
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // (~50 lines of styling)
 });
 ```
 
-### Multi-File with Components
-```
-App.js (ROOT - only imports allowed: react, react-native)
-src/TodoItem.js (utility component - only imports in allowed_imports list)
-```
+**Helper utilities** (100-150 lines):
+```javascript
+// src/utils/helpers.js
+export const filterByCategory = (items, category) => {
+  // Filter logic (20 lines)
+};
 
-**App.js allowed_imports:**
-```
-["react", "react-native", "./src/TodoItem"]
-```
+export const sortItems = (items, sortBy) => {
+  // Sort logic (20 lines)
+};
 
-**src/TodoItem.js allowed_imports:**
-```
-["react", "react-native"]
+export const validateItem = (item) => {
+  // Validation (15 lines)
+};
+
+export const formatDate = (date) => {
+  // Formatting (10 lines)
+};
+
+// ... more helpers ...
 ```
 
 ---
@@ -138,11 +231,16 @@ For EVERY file architecture specifies:
 
 - [ ] **allowed_imports** does NOT include any forbidden modules
 - [ ] **All imports** used in the code are in that file's allowed_imports
-- [ ] **No expo/* imports** unless they're core Expo API (which don't exist for MVP)
-- [ ] **No external packages** unless explicitly approved by architect
-- [ ] **React & React-Native only** for most MVP cases
-- [ ] **No navigation** unless explicitly required
-- [ ] **Local state only** (useState, useReducer, useRef)
+- [ ] **No expo/* imports** (expo/storage, expo/filesystem, etc.)
+- [ ] **No external packages** (all logic uses react + react-native only)
+- [ ] **React & React-Native only** - no additional npm packages
+- [ ] **NO navigation** (no react-navigation files, no tabs/stacks)
+- [ ] **NO multiple screens** (single screen app only)
+- [ ] **Local state only** (useState, useReducer, useCallback, etc.)
+- [ ] **Proper styling** (using StyleSheet)
+- [ ] **Event handlers** for all interactive elements
+- [ ] **Component organization** (5-7 files, proper line counts)
+- [ ] **No skeleton/TODO code** (everything production-ready)
 
 ---
 
@@ -183,12 +281,31 @@ Just write React Native JSX. Expo Snack SDK will handle the rest.
 
 ## Summary
 
-**ALLOWED**: `react`, `react-native` standard exports, local state  
-**FORBIDDEN**: Any module not explicitly listed above  
+**SCOPE**: Single-screen Expo app (NO navigation, 5-7 files, 150-400 lines per file)  
+**ALLOWED**: `react`, `react-native` standard exports, local state, hooks  
+**FORBIDDEN**: Any module not explicitly listed above, external packages, navigation
 
-**If you need storage/persistence**: Use `useState` with local state only for MVP.  
-**If you need advanced features**: They are out of scope for minimal MVP. Redesign.  
+**Architecture Structure**:
+```
+App.js (ROOT, 300-400 lines)
+  ├─ src/components/ (4-6 reusable UI components, 100-250 lines each)
+  └─ src/utils/ (1-2 helper modules, 100-150 lines each)
+```
+
+**Code Quality**:
+- ✅ Proper React hooks (useState, useEffect, useCallback, useReducer)
+- ✅ Styled with StyleSheet
+- ✅ Event handlers + user feedback
+- ✅ Organized components (not monolithic)
+- ✅ No skeleton code or TODOs
+- ✅ Production-quality implementation
+
+**If you need**:
+- Storage/persistence → Use useState to maintain state (no saving to disk for MVP)
+- Multiple screens/navigation → Out of scope. Single screen only.
+- Advanced features → Keep within single-screen constraints. Use React hooks for state.
+- External APIs/backend → Out of scope. Local data only.
 
 ---
 
-*Last Updated: April 2026 for Expo SDK 54*
+*Last Updated: April 2026 for Expo SDK 54 — Single-Screen Apps*

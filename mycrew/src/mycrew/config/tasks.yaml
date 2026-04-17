@@ -1,79 +1,80 @@
 plan_requirements:
   description: >
-    From the user's prompt ({content_prompt}), extract ONLY the minimum features for a first Expo mobile MVP.
+    From the user's prompt ({content_prompt}), extract features for a SINGLE-SCREEN Expo app.
     Constraints:
     - React Native + Expo SDK 54
-    - Prefer single-screen flow
-    - No navigation setup unless explicitly required by prompt
-    - No backend/auth unless explicitly required
-    - Minimize external libraries
+    - All features on ONE screen (NO navigation, tabs, or multiple screens)
+    - NO backend/auth/external APIs
+    - Aim for moderate complexity: several coordinated features, richer UX
+    - Minimize external libraries (react + react-native only)
   expected_output: >
-    Short MVP brief with 2-4 core features, one mobile user flow, and explicit out-of-scope items.
-    Mention that navigation and advanced integrations are out of scope unless explicitly requested.
+    App brief with 4-6 interrelated features, single screen flow, richer UX elements.
+    Mention that navigation, multiple screens, and advanced integrations are out of scope.
   agent: planner
 
 design_architecture:
   description: >
-    Design a strict MINIMAL architecture for Expo React Native JSX implementation.
+    Design a single-screen Expo React Native app architecture (5-7 files, 150-400 lines per file).
     Hard constraints:
-    - MAIN entry point: App.js at ROOT level (NOT src/App.js)
-    - Additional utility files up to 2 max under src/
-    - Prefer one main file + up to 2 tiny reusable components
-    - No navigation folders/routes/tabs/stacks unless explicitly required
-    - No Redux/MobX/Zustand/sagas or complex patterns
-    - CRITICAL: ONLY use these modules (anything else will cause import errors):
-      * react
-      * react-native (standard exports: View, Text, StyleSheet, Button, TextInput, ScrollView, etc.)
-      * NO other external packages unless absolutely critical to app functionality
+    - MAIN entry point: App.js at ROOT (typically 300-400 lines for main state/UI)
+    - 4-6 supporting files under src/:
+      * src/components/: Reusable UI components (100-200 lines each)
+      * src/utils/: Helper functions, logic (100-150 lines each)
+    - NO navigation, NO tabs, NO multiple screens
+    - All features coordinated on single screen
+    - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
+    - CRITICAL: ONLY use react and react-native modules
     REQUIRED OUTPUT FORMAT:
-    architecture_summary: <short paragraph>
-    external_dependencies: <list, MUST BE EMPTY or have only explicitly justified packages>
+    architecture_summary: <description of the single-screen app>
+    external_dependencies: (MUST BE EMPTY - no external packages for this architecture)
     files:
-      - path: (CRITICAL: App.js at ROOT; utility files at src/ComponentName.js)
-        purpose:
+      - path: (App.js at ROOT; components at src/components/X.js; utils at src/utils/X.js)
+        purpose: (clear description)
+        size_estimate: (150-400 lines for App.js; 100-250 lines for components/utils)
         exports:
-        state_props:
+        state/hooks: (which useState/hooks this file uses)
         handlers:
-        allowed_imports: (CRITICAL: ONLY list imports available in Expo SDK 54)
+        allowed_imports: (ONLY react and/or react-native)
     VALIDATION:
-      - allowed_imports MUST include react and react-native
-      - allowed_imports MUST NOT include: expo/storage, expo/filesystem, expo-sqlite, react-navigation
-      - allowed_imports MUST NOT include modules starting with @react-native- (deprecated pattern)
-      - If external dependency needed, justify with single reason
+      - allowed_imports MUST only contain: "react", "react-native"
+      - NO external_dependencies
+      - NO navigation, NO @react-native-* packages, NO expo/storage
+      - 5-7 files total
   expected_output: >
-    Strict architecture blueprint with App.js at root,
-    explicit per-file allowed_imports (ONLY react/react-native),
-    and EMPTY external_dependencies list.
+    Complete architecture blueprint with 5-7 files, proper code organization,
+    estimated line counts, state flow, and no external dependencies.
   agent: architect
   context: [plan_requirements]
 
 implement_mvp_features:
   description: >
-    Implement exactly the architecture blueprint.
+    Implement the architecture blueprint (5-7 files, substantial code).
     Hard rules:
-    - Create ONLY files listed in architecture.files
+    - Create ONLY files listed in architecture.files and in specified quantities
     - JSX only (no TypeScript/TSX)
-    - App.js MUST be written to the ROOT directory, not src/
-    - Other components go to src/ as specified in architecture
-    - CRITICAL: For each file, use ONLY imports listed in that file's allowed_imports.
-      VALIDATION: Before writing code, verify every import is in allowed_imports.
-      FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation, any @react-native-*
-    - Do not add features, navigation setup, or extra screens unless architecture explicitly includes them
-    - Keep each file concise and Expo Go compatible
-    - No placeholders, no TODOs, no explanations
+    - App.js at ROOT; components and utilities at src/ paths
+    - Write complete, production-quality code:
+      * App.js: 300-400 lines typical (main state, orchestration, central UI)
+      * Components: 100-250 lines each (reusable UI building blocks)
+      * Utils: 100-150 lines each (logic, helpers, formatters)
+    - NO skeleton code or TODOs. Everything must work as written.
+    - CRITICAL: For each file, use ONLY imports in allowed_imports.
+      Before writing each file, verify every import is whitelisted.
+      FORBIDDEN: expo/storage, expo-sqlite, react-navigation, @react-native-*
+    - Use React hooks (useState, useEffect, useCallback, useReducer) for state
+    - Proper styling (StyleSheet), event handlers, UI polish
+    - Do not add features beyond architecture
     Tool usage:
-    1) Use file_writer for one file at a time
-    2) For path "App.js" write to root; for path "src/X.js" write under src/
-    3) Use file_reader only when required
-    4) Use track_dependency ONLY if architecture.external_dependencies is non-empty
-    5) Do NOT output full code in normal chat text
-    6) CRITICAL: Verify no imports outside allowed_imports before writing each file
-    Final response after all tool calls must be exactly: DONE
+    1) Use file_writer for one file at a time (write substantial code per file)
+    2) For path "App.js" write to root; for path "src/*" write to that location
+    3) Use file_reader only if needed
+    4) Do NOT call track_dependency (architecture.external_dependencies is empty)
+    5) Do not output code in chat; only use file_writer
+    Final response after all tool calls: DONE
   expected_output: >
-    Implemented files match architecture exactly: App.js at root + utility files under src/,
-    imports STRICTLY follow per-file allowlists (no unauthorized modules),
-    dependencies tracked only if in architecture.external_dependencies,
-    final response exactly DONE.
+    Implemented 5-7 files: App.js at root with main state/UI (300-400 lines),
+    supporting components and utilities (100-250 lines each), all imports verified,
+    no external dependencies, production-quality working code, final response DONE.
   agent: feature_builder
   context: [design_architecture]
 
