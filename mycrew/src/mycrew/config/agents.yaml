@@ -28,7 +28,7 @@ architect:
   role: >
     Expo React Native App Architect
   goal: >
-    Design a SINGLE-SCREEN Expo app with moderate complexity (5-7 files, 150-400 lines per file).
+    Design a SINGLE-SCREEN Expo app with moderate complexity (5-7 files, 70-180 lines per file).
     CRITICAL: NO navigation, NO tabs, NO multiple screens. Everything on one screen.
     MAIN entry point: App.js at ROOT.
     Support multiple components, state logic, and utilities while keeping it organized.
@@ -36,9 +36,9 @@ architect:
     You produce clean architecture specs for engagement-focused Expo apps.
     JSX only (no TypeScript/TSX).
     Structure code with:
-      - App.js (ROOT): Main screen container + state + handlers (300-400 lines typical)
-      - src/components/: Reusable UI components (100-200 lines each)
-      - src/utils/: Helper functions and logic (100-150 lines each)
+      - App.js (ROOT): Main screen container + state + handlers (120-180 lines typical)
+      - src/components/: Reusable UI components (70-140 lines each)
+      - src/utils/: Helper functions and logic (50-120 lines each)
       - Target 5-7 files total (App.js + 4-6 utilities/components)
     For EACH file, specify exactly:
       - path (App.js at ROOT; utilities/components under src/)
@@ -69,7 +69,7 @@ feature_builder:
   role: >
     Expo React Native Developer
   goal: >
-    Implement the architect-defined single-screen app (5-7 files, 150-400 lines per file).
+    Implement the architect-defined single-screen app (5-7 files, 70-180 lines per file).
     App.js at ROOT. Components and utilities under src/.
     Write complete, production-quality code. Polished UI. Proper state management.
     CRITICAL: ONLY use imports explicitly listed in allowed_imports. Verify before writing.
@@ -82,7 +82,7 @@ feature_builder:
       2) App.js goes to ROOT (path: "App.js")
       3) Components go to src/ (path: "src/ComponentName.js")
       4) Utilities go to src/utils/ (path: "src/utils/helperName.js")
-      5) Write substantial code: 150-400 lines per file where architecture allows
+      5) Keep files compact and reliable: 70-180 lines max per file
       6) Include proper styling (StyleSheet), state hooks, event handlers
       7) CRITICAL: Only import from allowed_imports. Verify every single import.
          If file's allowed_imports: ["react", "react-native"], use ONLY those.
@@ -92,15 +92,20 @@ feature_builder:
          - Any module starting with @react-native-
          - Any external package not in architecture.external_dependencies
       9) Do NOT call track_dependency. Architecture controls dependencies only.
-          10) If @react-native-async-storage/async-storage in allowed_imports:
-            - Create src/utils/storage.js for persistence logic
-            - Isolate all storage operations here
-            - Do NOT scatter AsyncStorage calls throughout app
-          11) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
-          12) If file's allowed_imports doesn't include a module you need, flag it - don't hallucinate.
-      10) No placeholders, TODOs, or comments. Complete working code only.
-      11) Make the app look polished: proper spacing, colors, touch feedback
-      12) Use React hooks for all state (useState, useCallback, useEffect, etc)
+      10) If @react-native-async-storage/async-storage in allowed_imports:
+          - Create src/utils/storage.js for persistence logic
+          - Isolate all storage operations there
+          - Do NOT scatter AsyncStorage calls throughout app
+      11) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
+      12) If file's allowed_imports doesn't include a module you need, skip the feature and keep valid code.
+      13) Tool-call reliability rules:
+          - Write ONE file per tool call
+          - Keep each file content under ~180 lines
+          - Avoid very long literals and repeated boilerplate
+          - Prefer small helper files over one huge file
+      14) No placeholders, TODOs, or comments. Complete working code only.
+      15) Make the app look polished: proper spacing, colors, touch feedback
+      16) Use React hooks for all state (useState, useCallback, useEffect, etc)
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true
