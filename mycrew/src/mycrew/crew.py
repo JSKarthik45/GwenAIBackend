@@ -53,7 +53,7 @@ class Mycrew():
             config=self.agents_config['architect'],
             llm=architect_llm,
             verbose=False,  # Disable verbose to reduce context
-            max_tokens=4000,  # Reduced from 8000 (fewer files = shorter spec)
+            max_tokens=1800,  # Keep architecture outputs concise
         )
 
     @agent
@@ -62,17 +62,17 @@ class Mycrew():
             model=_required_llm_env("FEATURE_BUILDER_LLM"),
             temperature=0,
         )
-        # Strict limits to prevent request payloads exceeding Groq's 8KB tool parameter limit.
+        # Strict limits to prevent request payloads exceeding Groq's tool parameter limit.
         # Fewer iterations + output length limit = smaller context accumulation.
-        max_iter = max(_int_env("FEATURE_MAX_ITER", 10), 8)  # Reduced from 20 to 10
+        max_iter = max(_int_env("FEATURE_MAX_ITER", 6), 4)
         return Agent(
             config=self.agents_config['feature_builder'], 
             llm=feature_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,  # Disable verbose to reduce context size
             max_iter=max_iter,
-            max_tokens=2000,  # Force concise outputs (was unlimited)
-            max_retry_limit=2,  # Reduced from 4
+            max_tokens=1200,  # Force concise outputs
+            max_retry_limit=1,  # Reduce repeated oversized retries
             allow_delegation=False,
             memory=False,
             respect_context_window=True,  # Auto-truncate if needed

@@ -1,63 +1,78 @@
 plan_requirements:
   description: >
-    From the user's prompt ({content_prompt}), extract features for a SINGLE-SCREEN Expo app.
+    From the user's prompt ({content_prompt}), extract features for a MULTI-SCREEN Expo app.
     Constraints:
     - React Native + Expo SDK 54
-    - All features on ONE screen (NO navigation, tabs, or multiple screens)
+    - Exactly 3 screens: Home, History, Settings
+    - Manual screen switching only (no react-navigation library)
+    - Include top header title and bottom navbar
+    - Respect SafeAreaView layout
     - NO backend/auth/external APIs
-    - Aim for moderate complexity: several coordinated features, richer UX
+    - Keep implementation concise (not oversized files)
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
   expected_output: >
-    App brief with 4-6 interrelated features, single screen flow, richer UX elements.
-    Mention that navigation, multiple screens, and advanced integrations are out of scope.
+    App brief with 3-5 core features, multi-screen flow (Home/History/Settings), and clear UX requirements.
+    Must include safe area, top header title, and bottom navbar behavior.
   agent: planner
 
 design_architecture:
   description: >
-    Design a single-screen Expo React Native app architecture (5-7 files, 70-180 lines per file).
+    Design a multi-screen Expo React Native app architecture (6-9 files, 40-120 lines per file).
     Hard constraints:
-    - MAIN entry point: App.js at ROOT (typically 120-180 lines for main state/UI)
-    - 4-6 supporting files under src/:
-      * src/components/: Reusable UI components (70-140 lines each)
-      * src/utils/: Helper functions, logic (50-120 lines each)
-    - NO navigation, NO tabs, NO multiple screens
-    - All features coordinated on single screen
+    - MAIN entry point: App.js at ROOT (typically 60-90 lines)
+    - Use manual screen switching with React state (NO navigation libraries)
+    - Include exactly 3 screens under src/screens/:
+      * HomeScreen.js
+      * HistoryScreen.js
+      * SettingsScreen.js
+    - Include reusable shell components under src/components/:
+      * TopHeader component showing current screen name
+      * BottomNavbar component for screen switching
+    - Include SafeAreaView in app shell
+    - Supporting files under src/:
+      * src/screens/: exactly 3 screens (30-80 lines each)
+      * src/components/: shared UI (25-70 lines each)
+      * src/utils/: helper logic (25-70 lines each)
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
     - CRITICAL: ONLY use react and react-native modules
     REQUIRED OUTPUT FORMAT:
-    architecture_summary: <description of the single-screen app>
+    architecture_summary: <description of the multi-screen app>
     external_dependencies: (EMPTY unless persistent storage required, then ONLY @react-native-async-storage/async-storage)
     files:
-      - path: (App.js at ROOT; components at src/components/X.js; utils at src/utils/X.js)
+      - path: (App.js at ROOT; screens at src/screens/X.js; components at src/components/X.js; utils at src/utils/X.js)
         purpose: (clear description)
-        size_estimate: (120-180 lines for App.js; 50-140 lines for components/utils)
+        size_estimate: (60-90 lines for App.js; 25-80 lines for others)
         exports:
         state/hooks: (which useState/hooks this file uses)
         handlers:
         allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
     VALIDATION:
+      - Must include SafeAreaView usage in App shell
+      - Must include TopHeader and BottomNavbar components
+      - Must include exactly 3 screens and a screen-switch handler
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
-      - 5-7 files total
+      - 7-9 files total
   expected_output: >
-    Complete architecture blueprint with 5-7 files, proper code organization,
-    compact line counts for reliable tool calls, state flow, and no invalid dependencies.
+    Complete architecture blueprint with 7-9 files, multi-screen flow (Home/History/Settings), safe-area shell,
+    header + navbar components, compact line counts, and no invalid dependencies.
   agent: architect
   context: [plan_requirements]
 
 implement_mvp_features:
   description: >
-    Implement the architecture blueprint (5-7 files, compact reliable code).
+    Implement the architecture blueprint (6-9 files, compact reliable code).
     Hard rules:
     - Create ONLY files listed in architecture.files and in specified quantities
     - JSX only (no TypeScript/TSX)
-    - App.js at ROOT; components and utilities at src/ paths
+    - App.js at ROOT; screens/components/utilities at src/ paths
     - Write complete, production-quality code:
-      * App.js: 120-180 lines typical (main state, orchestration, central UI)
-      * Components: 70-140 lines each (reusable UI building blocks)
-      * Utils: 50-120 lines each (logic, helpers, formatters)
+      * App.js: 60-90 lines (app shell + safe area + screen state)
+      * Screens: 30-80 lines each
+      * Components: 25-70 lines each
+      * Utils: 25-70 lines each
     - NO skeleton code or TODOs. Everything must work as written.
     - CRITICAL: For each file, use ONLY imports in allowed_imports.
       Before writing each file, verify every import is whitelisted.
@@ -65,6 +80,8 @@ implement_mvp_features:
       ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for state
+    - App shell MUST include SafeAreaView, top header with current screen name, and bottom navbar
+    - Implement manual screen switching via state (no nav library)
     - Proper styling (StyleSheet), event handlers, UI polish
     - Do not add features beyond architecture
     Tool usage:
@@ -75,14 +92,15 @@ implement_mvp_features:
     5) Do not output code in chat; only use file_writer
     6) CRITICAL: Validate every import against allowed_imports before writing code
     7) If persistent storage used, create src/utils/storage.js with all AsyncStorage logic
-    8) Keep each file payload compact (<~180 lines) to avoid tool-call JSON failures
+    8) Keep each file payload compact (<~90 lines) to avoid tool-call JSON failures
     9) If a feature needs too much code, split logic into an additional helper file listed in architecture
+    10) NEVER output markdown/json fences before tool calls; send direct tool calls only
     Final response after all tool calls: DONE
   expected_output: >
-    Implemented 5-7 files: App.js at root with main state/UI (120-180 lines),
-    supporting components and utilities (50-140 lines each), all imports verified,
+    Implemented 6-9 files: App.js at root with safe-area shell and screen state,
+    screens/components/utils with compact sizes, all imports verified,
     external_dependencies honored (empty or just async-storage),
-    no invalid dependencies, production-quality working code, final response DONE.
+    no invalid dependencies, polished multi-screen UX with header + navbar, final response DONE.
   agent: feature_builder
   context: [design_architecture]
 

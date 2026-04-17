@@ -1,4 +1,4 @@
-﻿# Expo SDK 54 Import Rules (Single-Screen Mode)
+﻿# Expo SDK 54 Import Rules (Multi-Screen MVP Mode)
 
 ## Goal
 Keep generated apps reliable in Expo Go and avoid module resolution errors.
@@ -23,18 +23,31 @@ Use storage only in `src/utils/storage.js`.
 - Any `@react-native-*` package except `@react-native-async-storage/async-storage`
 
 ## Architecture Targets
-- Single screen only (no tabs, no stacks, no routing)
-- 5-7 files total
+- Multi-screen MVP with exactly 3 screens: `HomeScreen`, `HistoryScreen`, `SettingsScreen`
+- Manual screen switching with React state (no navigation library)
+- Include SafeAreaView app shell
+- Include top header with current screen title
+- Include bottom navbar for screen switching
+- 7-9 files total
 - Compact files for reliable tool calls:
-  - `App.js`: 120-180 lines
-  - Components: 70-140 lines
-  - Utils: 50-120 lines
+  - `App.js`: 60-90 lines
+  - Screens: 30-80 lines
+  - Components: 25-70 lines
+  - Utils: 25-70 lines
 
 ## Reliability Rules
 - One file per `file_writer` call
 - Keep payloads compact
 - Split large logic into helper files under `src/utils/`
 - Never import modules outside `allowed_imports`
+- Never output markdown/json fences before tool calls
+- Never output narrative text before tool calls
+
+## Screen Shell Pattern
+- `App.js` owns the current screen state
+- `src/components/TopHeader.js` renders the active screen title
+- `src/components/BottomNavbar.js` switches screens via callbacks
+- `src/screens/HomeScreen.js`, `HistoryScreen.js`, `SettingsScreen.js` render content only
 
 ## Storage Pattern
 
@@ -61,5 +74,11 @@ import { saveData, loadData } from './src/utils/storage';
 
 ## Anti-Hallucination Check
 If you see `expo/storage` in output, treat it as invalid and regenerate.
+
+## UI Shell Checklist
+- App uses `SafeAreaView`
+- Top header shows active screen name
+- Bottom navbar switches screens via local state
+- No react-navigation dependency
 
 Last updated: April 2026
