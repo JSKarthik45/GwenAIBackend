@@ -148,45 +148,37 @@ async function uploadToSnack(appDir) {
     throw new Error('No code files found to upload.');
   }
 
-  // CRITICAL: Snack SDK requires App.js (or App.tsx) at the root level
-  // If not present, create it from src/App.js or index.js
+  // CRITICAL: Snack SDK requires App.js at the root level
+  // Agents now write App.js directly to root (not src/App.js)
+  // Do NOT rename or transform the file - use exactly what agents generated
   if (!files['App.js'] && !files['App.tsx']) {
-    let appContent = null;
-
-    // Try to get App.js from src/
+    // Fallback: if no App.js at root, try to get it from src/
+    // (for legacy support or if agents wrote to wrong location)
     if (files['src/App.js']) {
-      appContent = files['src/App.js'].contents;
+      const appContent = files['src/App.js'].contents;
+      files['App.js'] = {
+        type: 'CODE',
+        contents: appContent,
+      };
+      delete files['src/App.js'];  // Remove src version since we moved it to root
+      console.log('  ℹ Moved src/App.js → App.js (for backward compatibility)');
     } else if (files['index.js']) {
-      // If only index.js exists, read it directly
-      appContent = fs.readFileSync(path.join(appDir, 'index.js'), 'utf8');
+      // Last resort: use index.js if that's all we have
+      const appContent = files['index.js'].contents;
+      files['App.js'] = {
+        type: 'CODE',
+        contents: appContent,
+      };
+      console.log('  ℹ Used index.js as App.js (fallback)');
     }
-
-    if (!appContent) {
-      throw new Error('Could not find App.js, App.tsx, src/App.js, or index.js in generated app.');
-    }
-
-    // Create root-level App.js by either:
-    // 1. Use src/App.js directly if it's a pure component
-    // 2. Or wrap it if it's using registerRootComponent
-    if (appContent.includes('registerRootComponent')) {
-      // This is index.js format, extract the actual App component
-      // Try to read src/App.js instead
-      const srcAppPath = path.join(appDir, 'src', 'App.js');
-      if (fs.existsSync(srcAppPath)) {
-        appContent = fs.readFileSync(srcAppPath, 'utf8');
-      }
-    }
-
-    files['App.js'] = {
-      type: 'CODE',
-      contents: appContent,
-    };
-
-    console.log('  ✓ Created root-level App.js from generated app');
   }
 
-  // Remove duplicate entry points to avoid confusion
-  delete files['index.js'];
+  // Remove index.js - Snack SDK should use App.js as the single entry point
+  // Do NOT send both (causes conflicts)
+  if (files['index.js']) {
+    delete files['index.js'];
+    console.log('  ✓ Removed index.js (using App.js as single entry point)');
+  }
 
   // Convert dependency format for Snack SDK (needs version object)
   const snackDependencies = {};

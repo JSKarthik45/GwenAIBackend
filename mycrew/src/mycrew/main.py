@@ -122,8 +122,10 @@ def _run_crew_with_retries(inputs: dict[str, str]) -> None:
 def create_index_js() -> None:
     """Create/preserve index.js entry point that points to src/App.
     
-    This is required by Expo as the main entry point. Even if agents 
-    write App.js in src/, this file must exist at the root.
+    NOTE: Deprecated for Snack SDK flow. Agents now write App.js to root directly.
+    Kept for local Expo Go testing only (not used in Snack upload).
+    
+    This is required by Expo as the main entry point for local development.
     """
     # Import locally to get the updated BASE_OUTPUT from custom_tool
     from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT
@@ -139,7 +141,7 @@ import App from './src/App';
 registerRootComponent(App);
 """
     index_file.write_text(content, encoding="utf-8")
-    print("✓ index.js entry point created (points to ./src/App)")
+    print("✓ index.js entry point created (for local Expo Go testing only)")
 
 def update_app_json() -> None:
     """Set static app identity in app.json."""

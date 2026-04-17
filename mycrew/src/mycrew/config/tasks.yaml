@@ -16,7 +16,8 @@ design_architecture:
   description: >
     Design a strict MINIMAL architecture for Expo React Native JSX implementation.
     Hard constraints:
-    - 2-3 files maximum under src/
+    - MAIN entry point: App.js at ROOT level (NOT src/App.js)
+    - Additional utility files up to 2 max under src/
     - Prefer one main file + up to 2 tiny reusable components
     - No navigation folders/routes/tabs/stacks unless explicitly required
     - No Redux/MobX/Zustand/sagas or complex patterns
@@ -26,7 +27,7 @@ design_architecture:
     architecture_summary: <short paragraph>
     external_dependencies: <list, empty if none>
     files:
-      - path:
+      - path: (CRITICAL: App.js goes to ROOT; utility files go to src/ComponentName.js)
         purpose:
         exports:
         state_props:
@@ -34,8 +35,9 @@ design_architecture:
         allowed_imports:
     allowed_imports is authoritative and will be used as a strict contract by implementation.
   expected_output: >
-    Strict architecture blueprint with 2-3 src files max, explicit per-file allowed_imports,
-    and empty/minimal external_dependencies.
+    Strict architecture blueprint with App.js at root,
+    explicit per-file allowed_imports, and empty/minimal external_dependencies.
+    Path examples: "App.js" (root), "src/TodoItem.js" (under src).
   agent: architect
   context: [plan_requirements]
 
@@ -45,19 +47,23 @@ implement_mvp_features:
     Hard rules:
     - Create ONLY files listed in architecture.files
     - JSX only (no TypeScript/TSX)
+    - App.js MUST be written to the ROOT directory, not src/
+    - Other components go to src/ as specified in architecture
     - For each file, use ONLY imports listed in that file's allowed_imports
     - Do not add navigation setup or extra screens unless architecture explicitly includes them
     - Keep each file concise and Expo Go compatible
     - No placeholders, no TODOs
     Tool usage:
     1) Use file_writer for one file at a time
-    2) Use file_reader only when required
-    3) Use track_dependency ONLY for packages in architecture.external_dependencies
-    4) Do not output full code in normal chat text
+    2) For path "App.js" write to root; for path "src/X.js" write to X under src/
+    3) Use file_reader only when required
+    4) Use track_dependency ONLY for packages in architecture.external_dependencies
+    5) Do not output full code in normal chat text
     Final response after all tool calls must be exactly: DONE
   expected_output: >
-    Implemented files match architecture exactly (2-3 files target), imports follow per-file allowlists,
-    dependencies tracked only if explicitly approved, final response exactly DONE.
+    Implemented files match architecture exactly: App.js at root + utility files under src/,
+    imports follow per-file allowlists, dependencies tracked only if explicitly approved,
+    final response exactly DONE.
   agent: feature_builder
   context: [design_architecture]
 
