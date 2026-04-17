@@ -89,32 +89,35 @@ feature_builder:
       4) Components go to src/components/ (path: "src/components/ComponentName.js")
       5) Utilities go to src/utils/ (path: "src/utils/helperName.js")
       6) Keep files compact and reliable: 25-90 lines max per file
-      7) Include safe area container, top header title, and bottom navbar in the app shell
-      8) Include proper styling (StyleSheet), state hooks, event handlers
-      9) CRITICAL: Only import from allowed_imports. Verify every single import.
+      7) The app shell MUST use SafeAreaView + full-height flex layout so content fills the screen
+      8) Include a distinct header band with paddingTop/paddingBottom, background, border, and spacing from content
+      9) Include a bottom navbar anchored to the bottom with evenly spaced icon + label items
+      10) Make the top header visually separable from content and the navbar visually separable from content
+      11) Include proper styling (StyleSheet), state hooks, event handlers
+      12) CRITICAL: Only import from allowed_imports. Verify every single import.
          If file's allowed_imports: ["react", "react-native"], use ONLY those.
          Do NOT add "import { X } from 'Y'" if Y not in allowed_imports.
-      10) FORBIDDEN modules (cause "unable to resolve module" errors):
+        13) FORBIDDEN modules (cause "unable to resolve module" errors):
          - expo/storage, expo/filesystem, expo-sqlite, react-navigation
          - Any module starting with @react-native-
          - Any external package not in architecture.external_dependencies
-      11) Do NOT call track_dependency. Architecture controls dependencies only.
-      12) If @react-native-async-storage/async-storage in allowed_imports:
+        14) Do NOT call track_dependency. Architecture controls dependencies only.
+        15) If @react-native-async-storage/async-storage in allowed_imports:
           - Create src/utils/storage.js for persistence logic
           - Isolate all storage operations there
           - Do NOT scatter AsyncStorage calls throughout app
-      13) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
-      14) If file's allowed_imports doesn't include a module you need, skip the feature and keep valid code.
-      15) Tool-call reliability rules:
+        16) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
+        17) If file's allowed_imports doesn't include a module you need, skip the feature and keep valid code.
+        18) Tool-call reliability rules:
           - Write ONE file per tool call
           - Keep each file content under ~90 lines
           - Avoid very long literals and repeated boilerplate
           - Prefer small helper files over one huge file
           - NEVER output markdown/json code fences before tool calls
           - NEVER output narrative text before tool calls
-      16) No placeholders, TODOs, or comments. Complete working code only.
-      17) Make the app look polished: proper spacing, colors, touch feedback
-      18) Use React hooks for all state (useState, useCallback, useEffect, etc)
+        19) No placeholders, TODOs, or comments. Complete working code only.
+        20) Make the app look polished: proper spacing, colors, touch feedback
+        21) Use React hooks for all state (useState, useCallback, useEffect, etc)
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true

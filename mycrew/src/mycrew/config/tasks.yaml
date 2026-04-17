@@ -5,14 +5,14 @@ plan_requirements:
     - React Native + Expo SDK 54
     - Exactly 3 screens: Home, History, Settings
     - Manual screen switching only (no react-navigation library)
-    - Include top header title and bottom navbar
+    - Include a distinct top header band and a bottom navbar with icons + labels
     - Respect SafeAreaView layout
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
   expected_output: >
     App brief with 3-5 core features, multi-screen flow (Home/History/Settings), and clear UX requirements.
-    Must include safe area, top header title, and bottom navbar behavior.
+    Must include safe area, distinct header band, and bottom navbar behavior.
   agent: planner
 
 design_architecture:
@@ -26,9 +26,10 @@ design_architecture:
       * HistoryScreen.js
       * SettingsScreen.js
     - Include reusable shell components under src/components/:
-      * TopHeader component showing current screen name
-      * BottomNavbar component for screen switching
+      * TopHeader component showing current screen name with visual separation from content
+      * BottomNavbar component for screen switching with evenly spaced icon+label items
     - Include SafeAreaView in app shell
+    - App shell must use full-height flex layout so main content is vertically distributed, not stuck at the top
     - Supporting files under src/:
       * src/screens/: exactly 3 screens (30-80 lines each)
       * src/components/: shared UI (25-70 lines each)
@@ -49,6 +50,9 @@ design_architecture:
     VALIDATION:
       - Must include SafeAreaView usage in App shell
       - Must include TopHeader and BottomNavbar components
+      - TopHeader must be visually distinct from content using padding, background, and spacing
+      - BottomNavbar must be fixed to the bottom, evenly spaced, and include icon + label for each item
+      - App content must use flex layout so it fills available space rather than sticking to the top
       - Must include exactly 3 screens and a screen-switch handler
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
@@ -80,7 +84,9 @@ implement_mvp_features:
       ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for state
-    - App shell MUST include SafeAreaView, top header with current screen name, and bottom navbar
+    - App shell MUST include SafeAreaView, distinct header band, and bottom navbar
+    - Bottom navbar must use evenly spaced icon + label items
+    - App content must use flex to distribute space vertically across the screen
     - Implement manual screen switching via state (no nav library)
     - Proper styling (StyleSheet), event handlers, UI polish
     - Do not add features beyond architecture

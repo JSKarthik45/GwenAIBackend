@@ -26,8 +26,9 @@ Use storage only in `src/utils/storage.js`.
 - Multi-screen MVP with exactly 3 screens: `HomeScreen`, `HistoryScreen`, `SettingsScreen`
 - Manual screen switching with React state (no navigation library)
 - Include SafeAreaView app shell
-- Include top header with current screen title
-- Include bottom navbar for screen switching
+- Include a distinct top header band with current screen title
+- Include a bottom navbar for screen switching with icon + label items
+- Main content area should fill remaining height using flex layout
 - 7-9 files total
 - Compact files for reliable tool calls:
   - `App.js`: 60-90 lines
@@ -77,8 +78,10 @@ If you see `expo/storage` in output, treat it as invalid and regenerate.
 
 ## UI Shell Checklist
 - App uses `SafeAreaView`
-- Top header shows active screen name
-- Bottom navbar switches screens via local state
+- Top header is visually separate from content using padding/background/border
+- Bottom navbar is anchored to the bottom and evenly spaced
+- Bottom navbar shows icon + label for each item
+- Main content fills the available height instead of sitting at the top only
 - No react-navigation dependency
 
 Last updated: April 2026
