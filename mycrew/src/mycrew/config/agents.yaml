@@ -127,6 +127,18 @@ feature_builder:
           - Do not leave one page using removed/renamed helpers
         15) Tool-call reliability rules:
           - Write ONE file per tool call
+          - NEVER call file_writer more than once in a single response
+          - If 5 files remain, you MUST use 5 separate interaction turns
+          - Emit exactly ONE file_writer call per assistant response
+          - Wait for the tool result before emitting the next file_writer call
+          - NEVER batch multiple file_writer calls in a single response
+          - NEVER send a list/array/object containing multiple file writes
+          - If N files remain, issue N separate sequential file_writer responses
+          - Sequential protocol for every file in architecture.files:
+            a) Validate imports against allowed_imports
+            b) Call file_writer for that single file
+            c) Wait for SUCCESS confirmation from tool output
+            d) Only then move to the next file
           - Keep each file content reasonably compact to reduce tool payload failures
           - Avoid very long literals and repeated boilerplate
           - Prefer small helper files over one huge file

@@ -119,6 +119,17 @@ implement_mvp_features:
     - Do not add features beyond architecture
     Tool usage:
     1) Use file_writer for one file at a time
+    1.0) NEVER call file_writer more than once in a single response
+    1.0.1) If 5 files remain, use 5 separate interaction turns
+    1.1) Emit exactly one file_writer call per assistant response
+    1.2) After each write, wait for tool completion before the next file_writer call
+    1.3) Never batch multiple file_writer calls in one response or payload
+    1.4) Never send multi-file arrays/objects to file_writer
+    1.5) Process architecture.files as a strict loop:
+      - Step A: Validate file imports against allowed_imports
+      - Step B: Write that single file with file_writer
+      - Step C: Wait for SUCCESS confirmation from tool output
+      - Step D: Move to next file only after SUCCESS
     2) Write only to "src/content/*", optional "src/shared/*", and optional "src/utils/*" paths
     3) Use file_reader only if needed
     4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
