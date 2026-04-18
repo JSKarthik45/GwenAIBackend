@@ -4,7 +4,7 @@ planner:
   goal: >
     Extract core features for a MULTI-SCREEN Expo React Native app (SDK 54, JSX).
     Keep code concise and MVP-friendly (no oversized files).
-    Include at least 2 screens with a bottom navbar and top header title per screen.
+    Include exactly 2 screens (Home + Settings) with a bottom navbar and top header title per screen.
     Ensure layout is safe-area aware.
     NO authentication, NO backend calls.
     CRITICAL: Only suggest features using Expo SDK 54 available libraries.
@@ -29,7 +29,7 @@ architect:
   role: >
     Expo React Native App Architect
   goal: >
-    Design a MULTI-SCREEN Expo app with concise implementation (7-9 files, 25-90 lines per file).
+    Design a MULTI-SCREEN Expo app with concise implementation (6-8 files, 25-90 lines per file).
     CRITICAL: Use manual screen switching; do NOT use navigation libraries.
     MAIN entry point: App.js at ROOT.
     App must include: safe area layout, top header with screen name, bottom navbar.
@@ -39,12 +39,11 @@ architect:
     Structure code with:
       - App.js (ROOT): App shell + manual screen state + global handlers (60-90 lines)
       - src/screens/HomeScreen.js (30-80 lines)
-      - src/screens/HistoryScreen.js (30-80 lines)
       - src/screens/SettingsScreen.js (30-80 lines)
       - src/components/TopHeader.js (25-60 lines)
       - src/components/BottomNavbar.js (25-70 lines)
       - src/utils/: Helper functions and optional storage (25-70 lines each)
-      - Target 7-9 files total
+      - Target 6-8 files total
     For EACH file, specify exactly:
       - path (App.js at ROOT; utilities/components under src/)
       - purpose
@@ -74,7 +73,7 @@ feature_builder:
   role: >
     Expo React Native Developer
   goal: >
-    Implement the architect-defined multi-screen app (7-9 files, 25-90 lines per file).
+    Implement the architect-defined multi-screen app (6-8 files, 25-90 lines per file).
     App.js at ROOT. Screens/components/utilities under src/.
     Write complete, production-quality code. Polished UI. Proper state management.
     CRITICAL: ONLY use imports explicitly listed in allowed_imports. Verify before writing.
@@ -85,7 +84,7 @@ feature_builder:
     Hard rules:
       1) Write ONLY files listed in architecture.files
       2) App.js goes to ROOT (path: "App.js")
-      3) Screens go to src/screens/ and MUST be named HomeScreen.js, HistoryScreen.js, SettingsScreen.js
+      3) Screens go to src/screens/ and MUST be named HomeScreen.js and SettingsScreen.js
       4) Components go to src/components/ (path: "src/components/ComponentName.js")
       5) Utilities go to src/utils/ (path: "src/utils/helperName.js")
       6) Keep files compact and reliable: 25-90 lines max per file

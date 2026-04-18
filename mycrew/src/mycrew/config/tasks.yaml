@@ -3,7 +3,7 @@ plan_requirements:
     From the user's prompt ({content_prompt}), extract features for a MULTI-SCREEN Expo app.
     Constraints:
     - React Native + Expo SDK 54
-    - Exactly 3 screens: Home, History, Settings
+    - Exactly 2 screens: Home and Settings
     - Manual screen switching only (no react-navigation library)
     - Include a distinct top header band and a bottom navbar with icons + labels
     - Respect SafeAreaView layout
@@ -11,19 +11,18 @@ plan_requirements:
     - Keep implementation concise (not oversized files)
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
   expected_output: >
-    App brief with 3-5 core features, multi-screen flow (Home/History/Settings), and clear UX requirements.
+    App brief with 3-5 core features, multi-screen flow (Home/Settings), and clear UX requirements.
     Must include safe area, distinct header band, and bottom navbar behavior.
   agent: planner
 
 design_architecture:
   description: >
-    Design a multi-screen Expo React Native app architecture (6-9 files, 40-120 lines per file).
+    Design a multi-screen Expo React Native app architecture (6-8 files, 40-120 lines per file).
     Hard constraints:
     - MAIN entry point: App.js at ROOT (typically 60-90 lines)
     - Use manual screen switching with React state (NO navigation libraries)
-    - Include exactly 3 screens under src/screens/:
+    - Include exactly 2 screens under src/screens/:
       * HomeScreen.js
-      * HistoryScreen.js
       * SettingsScreen.js
     - Include reusable shell components under src/components/:
       * TopHeader component showing current screen name with visual separation from content
@@ -31,7 +30,7 @@ design_architecture:
     - Include SafeAreaView in app shell
     - App shell must use full-height flex layout so main content is vertically distributed, not stuck at the top
     - Supporting files under src/:
-      * src/screens/: exactly 3 screens (30-80 lines each)
+      * src/screens/: exactly 2 screens (30-80 lines each)
       * src/components/: shared UI (25-70 lines each)
       * src/utils/: helper logic (25-70 lines each)
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
@@ -53,14 +52,14 @@ design_architecture:
       - TopHeader must be visually distinct from content using padding, background, and spacing
       - BottomNavbar must be fixed to the bottom, evenly spaced, and include icon + label for each item
       - App content must use flex layout so it fills available space rather than sticking to the top
-      - Must include exactly 3 screens and a screen-switch handler
+      - Must include exactly 2 screens and a screen-switch handler
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
-      - 7-9 files total
+      - 6-8 files total
   expected_output: >
-    Complete architecture blueprint with 7-9 files, multi-screen flow (Home/History/Settings), safe-area shell,
+    Complete architecture blueprint with 6-8 files, multi-screen flow (Home/Settings), safe-area shell,
     header + navbar components, compact line counts, and no invalid dependencies.
   agent: architect
   context: [plan_requirements]

@@ -21,6 +21,10 @@ from mycrew.tools.custom_tool import (
 )
 
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TEMPLATE_CACHE_DIR = REPO_ROOT / "TemplateMVP"
+
+
 def _find_executable(*names: str) -> str | None:
     """Find an executable reliably across local/dev and containerized environments."""
     candidates = [name for name in names if name]
@@ -72,6 +76,18 @@ def _resolve_node_tools() -> tuple[str | None, str | None]:
     npx_executable = env_npx or _find_executable("npx", "npx.cmd")
     npm_executable = env_npm or _find_executable("npm", "npm.cmd")
     return npx_executable, npm_executable
+
+
+def _copy_template_to_output(template_dir: Path, output_dir: Path) -> None:
+    """Copy the TemplateMVP Expo template into the target MVP folder."""
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+
+    shutil.copytree(
+        template_dir,
+        output_dir,
+        ignore=shutil.ignore_patterns("node_modules", ".expo", ".expo-shared"),
+    )
 
 
 def _is_tool_call_payload_error(exc: Exception) -> bool:
@@ -162,61 +178,69 @@ def update_app_json() -> None:
         print(f"⚠ Could not update app.json: {e}")
 
 def bootstrap_expo_directly() -> bool:
-    """Bootstrap Expo template directly in code (not through agents)."""
+    """Create TemplateMVP once (if missing), then copy it for each MVP run."""
     from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT, BOOTSTRAP_MARKER as TOOL_BOOTSTRAP_MARKER
-    
-    TOOL_BASE_OUTPUT.mkdir(parents=True, exist_ok=True)
-    package_json = TOOL_BASE_OUTPUT / "package.json"
-    
-    if package_json.exists():
-        TOOL_BOOTSTRAP_MARKER.write_text("ok\n", encoding="utf-8")
-        print("✓ Expo template already bootstrapped.")
-        return True
-    
-    print("📦 Bootstrapping Expo template...")
 
-    npx_executable, npm_executable = _resolve_node_tools()
+    cached_package_json = TEMPLATE_CACHE_DIR / "package.json"
 
-    is_windows = platform.system().lower().startswith("win")
-    if is_windows:
-        if npx_executable:
-            command = f'"{npx_executable}" create-expo-app@latest . --template blank@sdk-54 --yes --no-install'
-        elif npm_executable:
-            command = f'"{npm_executable}" exec create-expo-app@latest -- . --template blank@sdk-54 --yes --no-install'
-        else:
-            print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
-            return False
+    if cached_package_json.exists():
+        print(f"📦 Reusing TemplateMVP: {TEMPLATE_CACHE_DIR}")
     else:
-        if npx_executable:
-            command = [npx_executable, "create-expo-app@latest", ".", "--template", "blank@sdk-54", "--yes", "--no-install"]
-        elif npm_executable:
-            command = [npm_executable, "exec", "create-expo-app@latest", "--", ".", "--template", "blank@sdk-54", "--yes", "--no-install"]
+        print("📦 Creating TemplateMVP with Expo blank@sdk-54 (one-time bootstrap)...")
+
+        # Ensure partial cache content from failed runs is removed.
+        if TEMPLATE_CACHE_DIR.exists():
+            shutil.rmtree(TEMPLATE_CACHE_DIR)
+        TEMPLATE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+        npx_executable, npm_executable = _resolve_node_tools()
+
+        is_windows = platform.system().lower().startswith("win")
+        if is_windows:
+            if npx_executable:
+                command = f'"{npx_executable}" create-expo-app@latest . --template blank@sdk-54 --yes --no-install'
+            elif npm_executable:
+                command = f'"{npm_executable}" exec create-expo-app@latest -- . --template blank@sdk-54 --yes --no-install'
+            else:
+                print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
+                return False
         else:
-            print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
+            if npx_executable:
+                command = [npx_executable, "create-expo-app@latest", ".", "--template", "blank@sdk-54", "--yes", "--no-install"]
+            elif npm_executable:
+                command = [npm_executable, "exec", "create-expo-app@latest", "--", ".", "--template", "blank@sdk-54", "--yes", "--no-install"]
+            else:
+                print(f"❌ Could not find npx/npm. PATH={os.getenv('PATH', '')[:400]}")
+                return False
+
+        try:
+            result = subprocess.run(
+                command,
+                cwd=str(TEMPLATE_CACHE_DIR),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=900,
+                shell=isinstance(command, str),
+            )
+
+            if result.returncode != 0:
+                stderr = (result.stderr or "").strip()
+                print(f"❌ Expo template bootstrap failed: {stderr[:500]}")
+                return False
+
+            print("✓ TemplateMVP created successfully.")
+        except Exception as e:
+            print(f"❌ Error creating TemplateMVP: {e}")
             return False
 
     try:
-        result = subprocess.run(
-            command,
-            cwd=str(TOOL_BASE_OUTPUT),
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=900,
-            shell=isinstance(command, str),
-        )
-        
-        if result.returncode != 0:
-            stderr = (result.stderr or "").strip()
-            print(f"❌ Expo bootstrap failed: {stderr[:500]}")
-            return False
-        
+        _copy_template_to_output(TEMPLATE_CACHE_DIR, TOOL_BASE_OUTPUT)
         TOOL_BOOTSTRAP_MARKER.write_text("ok\n", encoding="utf-8")
-        print("✓ Expo template created successfully.")
+        print(f"✓ Copied template into MVP output: {TOOL_BASE_OUTPUT}")
         return True
-        
     except Exception as e:
-        print(f"❌ Error during Expo bootstrap: {e}")
+        print(f"❌ Failed to copy template into output: {e}")
         return False
 
 def clean_default_src_files() -> None:
