@@ -8,20 +8,37 @@ plan_requirements:
     - Focus only on what appears inside Home and Settings content areas
     - Prioritize the most important MVP outcomes first: must-have value before nice-to-have extras
     - Rank features by user impact and implementation feasibility for an MVP
-    - Avoid feature bloat; include only high-value features that materially improve user success
+    - Include MORE features than minimal mode: target 6-9 concrete features while preserving MVP focus
+    - Avoid feature bloat by keeping only high-value features that materially improve user success
+    - For each feature, define implementation details so coding can be done correctly on first pass
+    - Feature planning must include required user inputs, validation rules, state transitions, and expected behavior
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
     - Prioritize strong UI/UX quality: clear hierarchy, balanced spacing, readable typography, and intuitive interactions
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
   expected_output: >
-    App brief with 3-5 highest-priority core features and clear Home/Settings content behavior.
+    Detailed MVP feature spec with 6-9 features and clear Home/Settings content behavior.
+    REQUIRED OUTPUT FORMAT:
+    feature_plan:
+      - feature_name:
+        priority: (P1/P2/P3)
+        user_value:
+        target_screen: (Home/Settings/Both)
+        required_inputs: (fields, types, defaults)
+        processing_logic: (how inputs are transformed and used)
+        validation_rules: (required, ranges, formats, edge checks)
+        interaction_flow: (tap/input/result sequence)
+        ui_states: (initial/empty/loading/success/error)
+        persistence_needs: (none or storage keys/shape)
+        implementation_notes: (content/shared/utils placement)
+        acceptance_criteria: (testable pass conditions)
     Must include feature priority order (P1/P2/P3), user value rationale, and acceptance criteria for each feature.
     Must respect that navigation/header/safe area are prebuilt in template and not regenerated.
   agent: planner
 
 design_architecture:
   description: >
-    Design a content-layer Expo architecture (2-5 files, 25-90 lines per file) for a prebuilt template shell.
+    Design a content-layer Expo architecture (6-14 files, 25-110 lines per file) for a prebuilt template shell.
     Hard constraints:
     - Template provides root App.js, SafeAreaView, header, and bottom navbar
     - DO NOT redesign or regenerate navigation shell files
@@ -29,8 +46,9 @@ design_architecture:
       * src/content/HomeContent.js
       * src/content/SettingsContent.js
     - Supporting files under src/:
-      * src/content/: exactly 2 content files (25-90 lines each)
-      * src/utils/: helper logic (25-70 lines each)
+      * src/content/: exactly 2 content entry files (25-110 lines each)
+      * src/shared/: shared components/hooks/models used by both pages (20-100 lines each)
+      * src/utils/: helper logic/state utilities (20-90 lines each)
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
     - Design for excellent UX: visual hierarchy, accessible tap targets, predictable interactions, and polished spacing
     - Architecture must guarantee reliable behavior for all P1 features from the plan
@@ -41,9 +59,9 @@ design_architecture:
     architecture_summary: <description of Home/Settings content behavior inside template shell>
     external_dependencies: (EMPTY unless persistent storage required, then ONLY @react-native-async-storage/async-storage)
     files:
-      - path: (src/content/X.js and optional src/utils/X.js only)
+      - path: (src/content/X.js and optional src/shared/X.js or src/utils/X.js)
         purpose: (clear description)
-        size_estimate: (25-90 lines per file)
+        size_estimate: (20-110 lines per file)
         exports:
         state/hooks: (which useState/hooks this file uses)
         handlers:
@@ -52,33 +70,39 @@ design_architecture:
       - Must include exactly 2 content files: src/content/HomeContent.js and src/content/SettingsContent.js
       - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
       - Must not define navigation state or screen-switch handlers (template handles navigation)
+      - Agent may add shared files under src/shared when functionality is reused across pages
+      - Shared modules must be imported consistently by both pages when applicable
+      - Architecture must ensure no page references missing exports, handlers, or helpers
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
+      - Architecture must map all planned features to files (Home/Settings/shared/utils) without orphaned feature logic
+      - Prefer shared modules for reusable feature logic to reduce breakage across pages
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
-      - 2-5 files total
+      - 6-14 files total
   expected_output: >
-    Complete content-layer blueprint with 2-5 files focused on Home/Settings content,
-    template shell preserved, compact line counts, and no invalid dependencies.
-    Blueprint must fully cover all P1 features with concrete implementation paths.
+    Complete content-layer blueprint with 6-14 files focused on Home/Settings content,
+    template shell preserved, robust feature mapping, and no invalid dependencies.
+    Blueprint must fully cover all planned features with concrete implementation paths.
   agent: architect
   context: [plan_requirements]
 
 implement_mvp_features:
   description: >
-    Implement the content-layer architecture blueprint (2-5 files, compact reliable code).
+    Implement the content-layer architecture blueprint (6-14 files, compact reliable code).
     Hard rules:
     - Create ONLY files listed in architecture.files and in specified quantities
     - JSX only (no TypeScript/TSX)
-    - Write only content/util files under src/content and src/utils
+    - Write only content/shared/util files under src/content, src/shared, and src/utils
     - Write complete, production-quality code:
-      * Content files: 25-90 lines each
-      * Utils: 25-70 lines each
+      * Content files: 25-110 lines each
+      * Shared/utils files: 20-100 lines each
     - NO skeleton code or TODOs. Everything must work as written.
-    - Implement all P1 features completely end-to-end (UI + state + handlers)
+    - Implement all planned features completely end-to-end (UI + state + handlers)
     - Ensure each feature is production-grade in behavior, not just visually present
+    - If logic/UI is reused across pages, extract shared modules to avoid duplicated and inconsistent behavior
     - CRITICAL: For each file, use ONLY imports in allowed_imports.
       Before writing each file, verify every import is whitelisted.
       FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
@@ -95,21 +119,21 @@ implement_mvp_features:
     - Do not add features beyond architecture
     Tool usage:
     1) Use file_writer for one file at a time
-    2) Write only to "src/content/*" and optional "src/utils/*" paths
+    2) Write only to "src/content/*", optional "src/shared/*", and optional "src/utils/*" paths
     3) Use file_reader only if needed
     4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
     5) Do not output code in chat; only use file_writer
     6) CRITICAL: Validate every import against allowed_imports before writing code
     7) If persistent storage used, create src/utils/storage.js with all AsyncStorage logic
     8) Keep each file payload compact (<~90 lines) to avoid tool-call JSON failures
-    9) If a feature needs too much code, split logic into an additional helper file listed in architecture
+    9) If a feature needs too much code, split logic into additional shared/helper files listed in architecture
     10) NEVER output markdown/json fences before tool calls; send direct tool calls only
     Final response after all tool calls: DONE
   expected_output: >
-    Implemented 2-5 files in src/content and optional src/utils,
+    Implemented 6-14 files in src/content and optional src/shared/src/utils,
     template shell preserved unchanged, all imports verified,
     external_dependencies honored (empty or just async-storage),
-    no invalid dependencies, polished Home/Settings content UX, and complete P1 feature delivery, final response DONE.
+    no invalid dependencies, polished Home/Settings content UX, and complete planned feature delivery, final response DONE.
   agent: feature_builder
   context: [design_architecture]
 
