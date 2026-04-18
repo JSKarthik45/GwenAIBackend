@@ -6,11 +6,16 @@ plan_requirements:
     - Exactly 2 screens: Home and Settings
     - Navigation shell already exists in template (SafeAreaView + header + bottom navbar)
     - Focus only on what appears inside Home and Settings content areas
+    - Prioritize the most important MVP outcomes first: must-have value before nice-to-have extras
+    - Rank features by user impact and implementation feasibility for an MVP
+    - Avoid feature bloat; include only high-value features that materially improve user success
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
+    - Prioritize strong UI/UX quality: clear hierarchy, balanced spacing, readable typography, and intuitive interactions
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
   expected_output: >
-    App brief with 3-5 core features and clear Home/Settings content behavior.
+    App brief with 3-5 highest-priority core features and clear Home/Settings content behavior.
+    Must include feature priority order (P1/P2/P3), user value rationale, and acceptance criteria for each feature.
     Must respect that navigation/header/safe area are prebuilt in template and not regenerated.
   agent: planner
 
@@ -27,6 +32,10 @@ design_architecture:
       * src/content/: exactly 2 content files (25-90 lines each)
       * src/utils/: helper logic (25-70 lines each)
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
+    - Design for excellent UX: visual hierarchy, accessible tap targets, predictable interactions, and polished spacing
+    - Architecture must guarantee reliable behavior for all P1 features from the plan
+    - Define clear state ownership, data flow, and edge-case handling for each feature
+    - Prefer maintainable, testable, and readable structure over clever complexity
     - CRITICAL: ONLY use react and react-native modules
     REQUIRED OUTPUT FORMAT:
     architecture_summary: <description of Home/Settings content behavior inside template shell>
@@ -43,6 +52,8 @@ design_architecture:
       - Must include exactly 2 content files: src/content/HomeContent.js and src/content/SettingsContent.js
       - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
       - Must not define navigation state or screen-switch handlers (template handles navigation)
+      - Every planned P1 feature must map to concrete handlers/state in architecture
+      - Architecture must include empty/loading/error/validation UI behavior where relevant
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
@@ -51,6 +62,7 @@ design_architecture:
   expected_output: >
     Complete content-layer blueprint with 2-5 files focused on Home/Settings content,
     template shell preserved, compact line counts, and no invalid dependencies.
+    Blueprint must fully cover all P1 features with concrete implementation paths.
   agent: architect
   context: [plan_requirements]
 
@@ -65,13 +77,18 @@ implement_mvp_features:
       * Content files: 25-90 lines each
       * Utils: 25-70 lines each
     - NO skeleton code or TODOs. Everything must work as written.
+    - Implement all P1 features completely end-to-end (UI + state + handlers)
+    - Ensure each feature is production-grade in behavior, not just visually present
     - CRITICAL: For each file, use ONLY imports in allowed_imports.
       Before writing each file, verify every import is whitelisted.
       FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
       ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
-    - Proper styling (StyleSheet), event handlers, UI polish in content blocks
+    - Proper styling (StyleSheet), event handlers, and high-quality UX polish in content blocks
+    - Ensure content layout looks refined on both common phone sizes and larger devices
+    - Add robust guardrails in UI behavior: empty states, input validation feedback, and failure-safe interactions where needed
+    - Keep interactions snappy and predictable; avoid ambiguous controls
     - MUST preserve template shell/navigation files unchanged:
       * App.js
       * index.js
@@ -92,7 +109,7 @@ implement_mvp_features:
     Implemented 2-5 files in src/content and optional src/utils,
     template shell preserved unchanged, all imports verified,
     external_dependencies honored (empty or just async-storage),
-    no invalid dependencies, polished Home/Settings content UX, final response DONE.
+    no invalid dependencies, polished Home/Settings content UX, and complete P1 feature delivery, final response DONE.
   agent: feature_builder
   context: [design_architecture]
 

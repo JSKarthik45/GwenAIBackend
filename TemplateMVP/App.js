@@ -26,11 +26,10 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
+      <StatusBar style="dark" translucent={false} backgroundColor="#ffffff" />
 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{activeItem.label}</Text>
-        <Text style={styles.headerSubtitle}>Template navigation shell</Text>
       </View>
 
       <View style={styles.contentWrap}>
@@ -64,21 +63,18 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#d9dbe6',
     backgroundColor: '#ffffff',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
     color: '#20243a',
-  },
-  headerSubtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    color: '#636987',
+    textAlign: 'center',
   },
   contentWrap: {
     flex: 1,
