@@ -1,80 +1,68 @@
 plan_requirements:
   description: >
-    From the user's prompt ({content_prompt}), extract features for a MULTI-SCREEN Expo app.
+    From the user's prompt ({content_prompt}), extract features for CONTENT inside a prebuilt MULTI-SCREEN Expo shell.
     Constraints:
     - React Native + Expo SDK 54
     - Exactly 2 screens: Home and Settings
-    - Manual screen switching only (no react-navigation library)
-    - Include a distinct top header band and a bottom navbar with icons + labels
-    - Respect SafeAreaView layout
+    - Navigation shell already exists in template (SafeAreaView + header + bottom navbar)
+    - Focus only on what appears inside Home and Settings content areas
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
   expected_output: >
-    App brief with 3-5 core features, multi-screen flow (Home/Settings), and clear UX requirements.
-    Must include safe area, distinct header band, and bottom navbar behavior.
+    App brief with 3-5 core features and clear Home/Settings content behavior.
+    Must respect that navigation/header/safe area are prebuilt in template and not regenerated.
   agent: planner
 
 design_architecture:
   description: >
-    Design a multi-screen Expo React Native app architecture (6-8 files, 40-120 lines per file).
+    Design a content-layer Expo architecture (2-5 files, 25-90 lines per file) for a prebuilt template shell.
     Hard constraints:
-    - MAIN entry point: App.js at ROOT (typically 60-90 lines)
-    - Use manual screen switching with React state (NO navigation libraries)
-    - Include exactly 2 screens under src/screens/:
-      * HomeScreen.js
-      * SettingsScreen.js
-    - Include reusable shell components under src/components/:
-      * TopHeader component showing current screen name with visual separation from content
-      * BottomNavbar component for screen switching with evenly spaced icon+label items
-    - Include SafeAreaView in app shell
-    - App shell must use full-height flex layout so main content is vertically distributed, not stuck at the top
+    - Template provides root App.js, SafeAreaView, header, and bottom navbar
+    - DO NOT redesign or regenerate navigation shell files
+    - Content entry files must be:
+      * src/content/HomeContent.js
+      * src/content/SettingsContent.js
     - Supporting files under src/:
-      * src/screens/: exactly 2 screens (30-80 lines each)
-      * src/components/: shared UI (25-70 lines each)
+      * src/content/: exactly 2 content files (25-90 lines each)
       * src/utils/: helper logic (25-70 lines each)
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
     - CRITICAL: ONLY use react and react-native modules
     REQUIRED OUTPUT FORMAT:
-    architecture_summary: <description of the multi-screen app>
+    architecture_summary: <description of Home/Settings content behavior inside template shell>
     external_dependencies: (EMPTY unless persistent storage required, then ONLY @react-native-async-storage/async-storage)
     files:
-      - path: (App.js at ROOT; screens at src/screens/X.js; components at src/components/X.js; utils at src/utils/X.js)
+      - path: (src/content/X.js and optional src/utils/X.js only)
         purpose: (clear description)
-        size_estimate: (60-90 lines for App.js; 25-80 lines for others)
+        size_estimate: (25-90 lines per file)
         exports:
         state/hooks: (which useState/hooks this file uses)
         handlers:
         allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
     VALIDATION:
-      - Must include SafeAreaView usage in App shell
-      - Must include TopHeader and BottomNavbar components
-      - TopHeader must be visually distinct from content using padding, background, and spacing
-      - BottomNavbar must be fixed to the bottom, evenly spaced, and include icon + label for each item
-      - App content must use flex layout so it fills available space rather than sticking to the top
-      - Must include exactly 2 screens and a screen-switch handler
+      - Must include exactly 2 content files: src/content/HomeContent.js and src/content/SettingsContent.js
+      - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
+      - Must not define navigation state or screen-switch handlers (template handles navigation)
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
-      - 6-8 files total
+      - 2-5 files total
   expected_output: >
-    Complete architecture blueprint with 6-8 files, multi-screen flow (Home/Settings), safe-area shell,
-    header + navbar components, compact line counts, and no invalid dependencies.
+    Complete content-layer blueprint with 2-5 files focused on Home/Settings content,
+    template shell preserved, compact line counts, and no invalid dependencies.
   agent: architect
   context: [plan_requirements]
 
 implement_mvp_features:
   description: >
-    Implement the architecture blueprint (6-9 files, compact reliable code).
+    Implement the content-layer architecture blueprint (2-5 files, compact reliable code).
     Hard rules:
     - Create ONLY files listed in architecture.files and in specified quantities
     - JSX only (no TypeScript/TSX)
-    - App.js at ROOT; screens/components/utilities at src/ paths
+    - Write only content/util files under src/content and src/utils
     - Write complete, production-quality code:
-      * App.js: 60-90 lines (app shell + safe area + screen state)
-      * Screens: 30-80 lines each
-      * Components: 25-70 lines each
+      * Content files: 25-90 lines each
       * Utils: 25-70 lines each
     - NO skeleton code or TODOs. Everything must work as written.
     - CRITICAL: For each file, use ONLY imports in allowed_imports.
@@ -82,16 +70,15 @@ implement_mvp_features:
       FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
       ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
-    - Use React hooks (useState, useEffect, useCallback, useReducer) for state
-    - App shell MUST include SafeAreaView, distinct header band, and bottom navbar
-    - Bottom navbar must use evenly spaced icon + label items
-    - App content must use flex to distribute space vertically across the screen
-    - Implement manual screen switching via state (no nav library)
-    - Proper styling (StyleSheet), event handlers, UI polish
+    - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
+    - Proper styling (StyleSheet), event handlers, UI polish in content blocks
+    - MUST preserve template shell/navigation files unchanged:
+      * App.js
+      * index.js
     - Do not add features beyond architecture
     Tool usage:
     1) Use file_writer for one file at a time
-    2) For path "App.js" write to root; for path "src/*" write to that location
+    2) Write only to "src/content/*" and optional "src/utils/*" paths
     3) Use file_reader only if needed
     4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
     5) Do not output code in chat; only use file_writer
@@ -102,10 +89,10 @@ implement_mvp_features:
     10) NEVER output markdown/json fences before tool calls; send direct tool calls only
     Final response after all tool calls: DONE
   expected_output: >
-    Implemented 6-9 files: App.js at root with safe-area shell and screen state,
-    screens/components/utils with compact sizes, all imports verified,
+    Implemented 2-5 files in src/content and optional src/utils,
+    template shell preserved unchanged, all imports verified,
     external_dependencies honored (empty or just async-storage),
-    no invalid dependencies, polished multi-screen UX with header + navbar, final response DONE.
+    no invalid dependencies, polished Home/Settings content UX, final response DONE.
   agent: feature_builder
   context: [design_architecture]
 

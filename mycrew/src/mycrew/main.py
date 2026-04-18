@@ -136,28 +136,14 @@ def _run_crew_with_retries(inputs: dict[str, str]) -> None:
             raise
 
 def create_index_js() -> None:
-    """Create/preserve index.js entry point that points to src/App.
-    
-    NOTE: Deprecated for Snack SDK flow. Agents now write App.js to root directly.
-    Kept for local Expo Go testing only (not used in Snack upload).
-    
-    This is required by Expo as the main entry point for local development.
-    """
-    # Import locally to get the updated BASE_OUTPUT from custom_tool
+    """Preserve template index.js entry point (App.js at root)."""
     from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT
-    
+
     index_file = TOOL_BASE_OUTPUT / "index.js"
-    content = """import { registerRootComponent } from 'expo';
-
-import App from './src/App';
-
-// registerRootComponent calls AppRegistry.registerComponent('main', () => App);
-// It also ensures that whether you load the app in Expo Go or in a native build,
-// the environment is set up appropriately
-registerRootComponent(App);
-"""
-    index_file.write_text(content, encoding="utf-8")
-    print("✓ index.js entry point created (for local Expo Go testing only)")
+    if index_file.exists():
+        print("✓ Preserved template index.js entry point")
+    else:
+        print("⚠ index.js not found in template output; skipping")
 
 def update_app_json() -> None:
     """Set static app identity in app.json."""
@@ -244,10 +230,10 @@ def bootstrap_expo_directly() -> bool:
         return False
 
 def clean_default_src_files() -> None:
-    """Remove default src files"""
-    print("🧹 Cleaning default src files")
+    """Run template-safe cleanup for legacy files only."""
+    print("🧹 Running template-safe cleanup")
     remove_default_src_files()
-    print("✓ Default src files removed (JSX-only mode).")
+    print("✓ Template-safe cleanup complete.")
 
 
 def _npm_install_with_fallback(npm_executable: str, cwd: Path, args: list[str]) -> tuple[bool, str]:

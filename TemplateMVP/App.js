@@ -1,20 +1,114 @@
+import { useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import HomeContent from './src/content/HomeContent';
+import SettingsContent from './src/content/SettingsContent';
+
+const NAV_ITEMS = [
+  { key: 'home', label: 'Home', icon: '⌂' },
+  { key: 'settings', label: 'Settings', icon: '⚙' },
+];
 
 export default function App() {
+  const [activeScreen, setActiveScreen] = useState('home');
+
+  const activeItem = useMemo(
+    () => NAV_ITEMS.find((item) => item.key === activeScreen) || NAV_ITEMS[0],
+    [activeScreen]
+  );
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar style="dark" />
+
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{activeItem.label}</Text>
+        <Text style={styles.headerSubtitle}>Template navigation shell</Text>
+      </View>
+
+      <View style={styles.contentWrap}>
+        {activeScreen === 'home' ? <HomeContent /> : <SettingsContent />}
+      </View>
+
+      <View style={styles.navbar}>
+        {NAV_ITEMS.map((item) => {
+          const isActive = item.key === activeScreen;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={styles.navItem}
+              onPress={() => setActiveScreen(item.key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.navIcon, isActive && styles.navActive]}>{item.icon}</Text>
+              <Text style={[styles.navLabel, isActive && styles.navActive]}>{item.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f6f7fb',
+  },
+  header: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#d9dbe6',
+    backgroundColor: '#ffffff',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#20243a',
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#636987',
+  },
+  contentWrap: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  navbar: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#d9dbe6',
+    backgroundColor: '#ffffff',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  navItem: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  navIcon: {
+    fontSize: 18,
+    color: '#727894',
+  },
+  navLabel: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#727894',
+  },
+  navActive: {
+    color: '#1f4bd8',
+    fontWeight: '700',
   },
 });

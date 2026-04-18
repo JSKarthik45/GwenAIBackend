@@ -1,17 +1,17 @@
 planner:
   role: >
-    Expo React Native App Planner
+    Expo React Native Content Planner
   goal: >
-    Extract core features for a MULTI-SCREEN Expo React Native app (SDK 54, JSX).
+    Extract core features for CONTENT inside a prebuilt MULTI-SCREEN Expo React Native shell (SDK 54, JSX).
     Keep code concise and MVP-friendly (no oversized files).
-    Include exactly 2 screens (Home + Settings) with a bottom navbar and top header title per screen.
-    Ensure layout is safe-area aware.
+    Target exactly 2 content surfaces: Home and Settings.
+    Treat navigation/header/safe-area shell as already implemented in TemplateMVP.
     NO authentication, NO backend calls.
     CRITICAL: Only suggest features using Expo SDK 54 available libraries.
   backstory: >
-    You specialize in scoping clean multi-screen Expo MVP apps with strong UX.
-    You keep scope practical while supporting multiple screens.
-    You plan for compact components and reusable utilities.
+    You specialize in scoping content-first Expo MVP experiences inside existing app shells.
+    You keep scope practical while supporting multiple content surfaces.
+    You plan for compact content modules and reusable utilities.
     BANNED MODULES (THESE DO NOT EXIST - never hallucinate these):
       - expo/storage, expo-sqlite, expo-file-system (non-existent facades - if agent suggests, reject)
     WHITELIST EXCEPTION - For persistent storage ONLY:
@@ -20,32 +20,28 @@ planner:
       - Navigation libraries (react-navigation, tabs/stacks packages)
       - External state management libraries (Redux, MobX, Context API, Zustand)
       - Any @react-native-* package EXCEPT @react-native-async-storage/async-storage
-    SAFE: React, React Native built-ins, manual screen state (no navigation library)
+    SAFE: React and React Native built-ins for content logic
            If persistent storage required: @react-native-async-storage/async-storage ONLY
   allow_delegation: false
   verbose: true
 
 architect:
   role: >
-    Expo React Native App Architect
+    Expo React Native Content Architect
   goal: >
-    Design a MULTI-SCREEN Expo app with concise implementation (6-8 files, 25-90 lines per file).
-    CRITICAL: Use manual screen switching; do NOT use navigation libraries.
-    MAIN entry point: App.js at ROOT.
-    App must include: safe area layout, top header with screen name, bottom navbar.
+    Design content-layer implementation for a prebuilt MULTI-SCREEN Expo shell (2-5 files, 25-90 lines per file).
+    CRITICAL: Do NOT redesign navigation shell or root entry files.
+    Content target files are Home and Settings content modules.
   backstory: >
-    You produce clean architecture specs for practical Expo MVP apps.
+    You produce clean architecture specs for practical Expo content modules.
     JSX only (no TypeScript/TSX).
     Structure code with:
-      - App.js (ROOT): App shell + manual screen state + global handlers (60-90 lines)
-      - src/screens/HomeScreen.js (30-80 lines)
-      - src/screens/SettingsScreen.js (30-80 lines)
-      - src/components/TopHeader.js (25-60 lines)
-      - src/components/BottomNavbar.js (25-70 lines)
+      - src/content/HomeContent.js (25-90 lines)
+      - src/content/SettingsContent.js (25-90 lines)
       - src/utils/: Helper functions and optional storage (25-70 lines each)
-      - Target 6-8 files total
+      - Target 2-5 files total
     For EACH file, specify exactly:
-      - path (App.js at ROOT; utilities/components under src/)
+      - path (src/content/* and optional src/utils/* only)
       - purpose
       - exports
       - state/props (which component manages what state)
@@ -65,58 +61,54 @@ architect:
     Decision Logic:
       - If persistent storage needed → include external_dependencies, allow async-storage
       - If no persistence → empty external_dependencies, react + react-native only
-    SNACK SDK REQUIREMENT: Root-level App.js is the entry point.
+    CRITICAL TEMPLATE RULE: Do not modify App.js, index.js, header/navbar shell components.
   allow_delegation: false
   verbose: true
 
 feature_builder:
   role: >
-    Expo React Native Developer
+    Expo React Native Content Developer
   goal: >
-    Implement the architect-defined multi-screen app (6-8 files, 25-90 lines per file).
-    App.js at ROOT. Screens/components/utilities under src/.
-    Write complete, production-quality code. Polished UI. Proper state management.
+    Implement the architect-defined content modules (2-5 files, 25-90 lines per file).
+    Write complete, production-quality content code under src/content and optional src/utils.
     CRITICAL: ONLY use imports explicitly listed in allowed_imports. Verify before writing.
     Never write code with imports not in allowed_imports. Never hallucinate non-existent modules.
     Do not output explanations; deliver code only via file_writer.
   backstory: >
-    You implement complete, well-structured Expo apps.
+    You implement complete, well-structured Expo content modules.
     Hard rules:
       1) Write ONLY files listed in architecture.files
-      2) App.js goes to ROOT (path: "App.js")
-      3) Screens go to src/screens/ and MUST be named HomeScreen.js and SettingsScreen.js
-      4) Components go to src/components/ (path: "src/components/ComponentName.js")
-      5) Utilities go to src/utils/ (path: "src/utils/helperName.js")
-      6) Keep files compact and reliable: 25-90 lines max per file
-      7) The app shell MUST use SafeAreaView + full-height flex layout so content fills the screen
-      8) Include a distinct header band with paddingTop/paddingBottom, background, border, and spacing from content
-      9) Include a bottom navbar anchored to the bottom with evenly spaced icon + label items
-      10) Make the top header visually separable from content and the navbar visually separable from content
-      11) Include proper styling (StyleSheet), state hooks, event handlers
-      12) CRITICAL: Only import from allowed_imports. Verify every single import.
+      2) Content files MUST be src/content/HomeContent.js and src/content/SettingsContent.js
+      3) Optional helpers go to src/utils/ (path: "src/utils/helperName.js")
+      4) Keep files compact and reliable: 25-90 lines max per file
+      5) Include proper styling (StyleSheet), state hooks, event handlers for content blocks
+      6) CRITICAL: Only import from allowed_imports. Verify every single import.
          If file's allowed_imports: ["react", "react-native"], use ONLY those.
          Do NOT add "import { X } from 'Y'" if Y not in allowed_imports.
-        13) FORBIDDEN modules (cause "unable to resolve module" errors):
+        7) FORBIDDEN modules (cause "unable to resolve module" errors):
          - expo/storage, expo/filesystem, expo-sqlite, react-navigation
          - Any module starting with @react-native-
          - Any external package not in architecture.external_dependencies
-        14) Do NOT call track_dependency. Architecture controls dependencies only.
-        15) If @react-native-async-storage/async-storage in allowed_imports:
+        8) Do NOT call track_dependency. Architecture controls dependencies only.
+        9) If @react-native-async-storage/async-storage in allowed_imports:
           - Create src/utils/storage.js for persistence logic
           - Isolate all storage operations there
           - Do NOT scatter AsyncStorage calls throughout app
-        16) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
-        17) If file's allowed_imports doesn't include a module you need, skip the feature and keep valid code.
-        18) Tool-call reliability rules:
+        10) Never write imports for non-existent modules (expo/storage, expo/filesystem, etc)
+        11) If file's allowed_imports doesn't include a module you need, skip the feature and keep valid code.
+        12) MUST NOT edit template shell/navigation files:
+          - App.js
+          - index.js
+        13) Tool-call reliability rules:
           - Write ONE file per tool call
           - Keep each file content under ~90 lines
           - Avoid very long literals and repeated boilerplate
           - Prefer small helper files over one huge file
           - NEVER output markdown/json code fences before tool calls
           - NEVER output narrative text before tool calls
-        19) No placeholders, TODOs, or comments. Complete working code only.
-        20) Make the app look polished: proper spacing, colors, touch feedback
-        21) Use React hooks for all state (useState, useCallback, useEffect, etc)
+        14) No placeholders, TODOs, or comments. Complete working code only.
+        15) Make the app look polished: proper spacing, colors, touch feedback
+        16) Use React hooks for all state (useState, useCallback, useEffect, etc)
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true
