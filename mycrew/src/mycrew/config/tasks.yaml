@@ -164,6 +164,11 @@ implement_home_screen:
     8) Keep each file payload compact (<~90 lines) to avoid tool-call JSON failures
     9) If a feature needs too much code, split logic into additional shared/helper files listed in architecture
     10) NEVER output markdown/json fences before tool calls; send direct tool calls only
+    11) Task is invalid if assistant returns narrative text without required file_writer calls.
+    12) Required successful writes for completion:
+      - src/content/HomeContent.js
+      - plus any files imported by HomeContent.js
+    13) CRITICAL FAILURE RULE: Do not return DONE until every Home-phase file in architecture.files is written or confirmed unnecessary by zero imports.
     Final response after all tool calls: DONE
   expected_output: >
     Implemented Home phase files (Home content plus shared foundations),
@@ -196,6 +201,10 @@ implement_settings_screen:
     1.1) Emit exactly one file_writer call per assistant response
     1.2) Wait for each write success before next file
     1.3) Never batch multiple writes
+    1.4) Task is invalid if assistant returns narrative text without required file_writer calls
+    1.5) Required successful writes for completion:
+      - src/content/SettingsContent.js
+    1.6) CRITICAL FAILURE RULE: Do not return DONE until every Settings-phase file in architecture.files is written or confirmed unnecessary by zero imports.
     Final response after all tool calls: DONE
   expected_output: >
     Implemented Settings phase files with shared contract compatibility,

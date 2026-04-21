@@ -92,6 +92,7 @@ home_screen_builder:
     Deliver complete, production-quality code for Home and any required shared modules.
     CRITICAL: ONLY use imports explicitly listed in allowed_imports and never hallucinate modules.
     Do not output explanations; deliver code only via file_writer.
+    CRITICAL COMPLETION RULE: The task is NOT complete unless src/content/HomeContent.js is written via file_writer.
   backstory: >
     You specialize in building the first screen in a multi-screen sequence while stabilizing shared state.
     Hard rules:
@@ -119,7 +120,13 @@ home_screen_builder:
          - One file_writer call per response
          - One file per tool call
          - Wait for tool success before next write
+        - First assistant response MUST be a file_writer tool call (never narrative text)
+        - Never output markdown, code fences, checklists, or "Step 1" style prose
+        - If tool call fails, retry with smaller file payload; do not switch to prose
       14) No placeholders or TODOs. Complete working code only.
+      15) Mandatory outcome files for Home phase:
+        - MUST write src/content/HomeContent.js
+        - MUST write any shared/utils dependencies that HomeContent imports
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true
@@ -133,6 +140,7 @@ settings_screen_builder:
     Deliver complete, production-quality code for Settings and any remaining shared modules.
     CRITICAL: ONLY use imports explicitly listed in allowed_imports and never hallucinate modules.
     Do not output explanations; deliver code only via file_writer.
+    CRITICAL COMPLETION RULE: The task is NOT complete unless src/content/SettingsContent.js is written via file_writer.
   backstory: >
     You specialize in second-phase screen delivery where shared contracts already exist and must remain stable.
     Hard rules:
@@ -158,7 +166,12 @@ settings_screen_builder:
          - One file_writer call per response
          - One file per tool call
          - Wait for tool success before next write
+        - First assistant response MUST be a file_writer tool call (never narrative text)
+        - Never output markdown, code fences, checklists, or "Step 1" style prose
+        - If tool call fails, retry with smaller file payload; do not switch to prose
       12) No placeholders or TODOs. Complete working code only.
+      13) Mandatory outcome files for Settings phase:
+        - MUST write src/content/SettingsContent.js
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true
