@@ -249,6 +249,79 @@ def _extract_local_imports(source: str) -> list[str]:
     return [item for item in imports if item.startswith(".")]
 
 
+def _extract_local_import_specs(source: str) -> list[tuple[str, str]]:
+    """Extract (module_path, import_clause) pairs for relative imports."""
+    pattern = re.compile(r"import\s+(.+?)\s+from\s+['\"]([^'\"]+)['\"]", re.S)
+    specs: list[tuple[str, str]] = []
+    for clause, module_path in pattern.findall(source):
+        if module_path.startswith("."):
+            specs.append((module_path, clause.strip()))
+    return specs
+
+
+def _parse_import_clause(clause: str) -> tuple[bool, set[str], bool]:
+    """Return (needs_default, named_imports, is_namespace_import)."""
+    normalized = " ".join(clause.split())
+    if normalized.startswith("* as "):
+        return (False, set(), True)
+
+    needs_default = False
+    named_imports: set[str] = set()
+
+    brace_start = normalized.find("{")
+    brace_end = normalized.rfind("}")
+
+    if brace_start != -1 and brace_end != -1 and brace_end > brace_start:
+        # There is a named import block, optionally with a default import prefix.
+        prefix = normalized[:brace_start].strip().rstrip(",").strip()
+        if prefix:
+            needs_default = True
+
+        named_block = normalized[brace_start + 1:brace_end].strip()
+        for raw_item in named_block.split(","):
+            item = raw_item.strip()
+            if not item:
+                continue
+            token = item.split(" as ")[0].strip()
+            if token:
+                named_imports.add(token)
+    else:
+        # Default import only.
+        if normalized:
+            needs_default = True
+
+    return (needs_default, named_imports, False)
+
+
+def _analyze_exports(module_source: str) -> tuple[bool, set[str], bool]:
+    """Return (has_default_export, named_exports, has_export_star)."""
+    has_default_export = bool(re.search(r"export\s+default\s+", module_source))
+    has_export_star = bool(re.search(r"export\s+\*\s+from\s+['\"]", module_source))
+
+    named_exports: set[str] = set()
+
+    for name in re.findall(r"export\s+(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)", module_source):
+        named_exports.add(name)
+
+    for export_block in re.findall(r"export\s*\{([^}]+)\}", module_source):
+        for raw_item in export_block.split(","):
+            item = raw_item.strip()
+            if not item:
+                continue
+            if " as " in item:
+                left, right = item.split(" as ", 1)
+                left = left.strip()
+                right = right.strip()
+                if left == "default":
+                    has_default_export = True
+                elif right:
+                    named_exports.add(right)
+            else:
+                named_exports.add(item)
+
+    return (has_default_export, named_exports, has_export_star)
+
+
 def _resolve_js_module(base_file: Path, local_import: str) -> Path | None:
     """Resolve a local JS import path to an existing file path if possible."""
     base_dir = base_file.parent
@@ -286,6 +359,90 @@ def _find_unresolved_imports(file_path: Path) -> list[str]:
     return unresolved
 
 
+def _find_missing_dependency_edges(entry_file: Path) -> list[str]:
+    """Recursively validate local imports from an entry file.
+
+    Returns a list of missing dependency edges formatted as
+    "relative/source.js -> ../missing/module".
+    """
+    if not entry_file.exists():
+        return []
+
+    visited: set[Path] = set()
+    missing: list[str] = []
+
+    def _walk(current_file: Path) -> None:
+        resolved_current = current_file.resolve()
+        if resolved_current in visited:
+            return
+        visited.add(resolved_current)
+
+        source = current_file.read_text(encoding="utf-8")
+        local_imports = _extract_local_imports(source)
+        for local_import in local_imports:
+            target = _resolve_js_module(current_file, local_import)
+            if target is None:
+                missing.append(f"{current_file.name} -> {local_import}")
+                continue
+            _walk(target)
+
+    _walk(entry_file)
+    return missing
+
+
+def _find_invalid_import_contracts(entry_file: Path) -> list[str]:
+    """Recursively validate local import contracts (named/default compatibility)."""
+    if not entry_file.exists():
+        return []
+
+    visited: set[Path] = set()
+    invalid: list[str] = []
+
+    def _walk(current_file: Path) -> None:
+        resolved_current = current_file.resolve()
+        if resolved_current in visited:
+            return
+        visited.add(resolved_current)
+
+        source = current_file.read_text(encoding="utf-8")
+        import_specs = _extract_local_import_specs(source)
+
+        for module_path, clause in import_specs:
+            target = _resolve_js_module(current_file, module_path)
+            if target is None:
+                # Missing-file issues are handled by _find_missing_dependency_edges.
+                continue
+
+            needs_default, named_imports, is_namespace = _parse_import_clause(clause)
+            if is_namespace:
+                _walk(target)
+                continue
+
+            target_source = target.read_text(encoding="utf-8")
+            has_default_export, named_exports, has_export_star = _analyze_exports(target_source)
+
+            # If export-star is present, skip strict named checks because re-exports are dynamic.
+            if needs_default and not has_default_export:
+                invalid.append(f"{current_file.name} -> {module_path} (default import not exported)")
+
+            if not has_export_star:
+                for name in named_imports:
+                    if name == "default":
+                        if not has_default_export:
+                            invalid.append(
+                                f"{current_file.name} -> {module_path} (named default import requires default export)"
+                            )
+                    elif name not in named_exports:
+                        invalid.append(
+                            f"{current_file.name} -> {module_path} (named import '{name}' not exported)"
+                        )
+
+            _walk(target)
+
+    _walk(entry_file)
+    return invalid
+
+
 def _ensure_non_template_content() -> None:
     """Guarantee Home/Settings content files exist with usable, resolvable implementation.
 
@@ -305,18 +462,26 @@ def _ensure_non_template_content() -> None:
         home_text = home_file.read_text(encoding="utf-8")
         if "Home Content" in home_text and "Welcome!" in home_text:
             home_needs_fallback = True
-        home_unresolved = _find_unresolved_imports(home_file)
-        if home_unresolved:
-            print(f"⚠ HomeContent has unresolved imports: {home_unresolved}")
+        home_missing_tree = _find_missing_dependency_edges(home_file)
+        if home_missing_tree:
+            print(f"⚠ HomeContent dependency tree has missing imports: {home_missing_tree}")
+            home_needs_fallback = True
+        home_invalid_contracts = _find_invalid_import_contracts(home_file)
+        if home_invalid_contracts:
+            print(f"⚠ HomeContent import/export contract issues: {home_invalid_contracts}")
             home_needs_fallback = True
 
     if settings_file.exists():
         settings_text = settings_file.read_text(encoding="utf-8")
         if "Settings Content" in settings_text and "Customize your app" in settings_text:
             settings_needs_fallback = True
-        settings_unresolved = _find_unresolved_imports(settings_file)
-        if settings_unresolved:
-            print(f"⚠ SettingsContent has unresolved imports: {settings_unresolved}")
+        settings_missing_tree = _find_missing_dependency_edges(settings_file)
+        if settings_missing_tree:
+            print(f"⚠ SettingsContent dependency tree has missing imports: {settings_missing_tree}")
+            settings_needs_fallback = True
+        settings_invalid_contracts = _find_invalid_import_contracts(settings_file)
+        if settings_invalid_contracts:
+            print(f"⚠ SettingsContent import/export contract issues: {settings_invalid_contracts}")
             settings_needs_fallback = True
 
     if not (home_needs_fallback or settings_needs_fallback):

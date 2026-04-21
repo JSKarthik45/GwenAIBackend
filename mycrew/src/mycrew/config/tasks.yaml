@@ -205,6 +205,8 @@ implement_settings_screen:
     1.5) Required successful writes for completion:
       - src/content/SettingsContent.js
     1.6) CRITICAL FAILURE RULE: Do not return DONE until every Settings-phase file in architecture.files is written or confirmed unnecessary by zero imports.
+    1.7) Before returning DONE, verify that every local import used by src/content/SettingsContent.js resolves to an existing file under src/shared or src/utils; if not, create missing modules first.
+    1.8) Also verify import/export compatibility for every SettingsContent local import: if importing a named symbol, that symbol must be exported by the target module; if importing default, target must export default.
     Final response after all tool calls: DONE
   expected_output: >
     Implemented Settings phase files with shared contract compatibility,
