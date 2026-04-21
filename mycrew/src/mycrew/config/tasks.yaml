@@ -57,6 +57,19 @@ design_architecture:
     - CRITICAL: ONLY use react and react-native modules
     REQUIRED OUTPUT FORMAT:
     architecture_summary: <description of Home/Settings content behavior inside template shell>
+    shared_state_contract:
+      owner: (Home/Settings/Both)
+      variables:
+        - name:
+          type:
+          default:
+          updated_by: (Home/Settings/Both)
+          consumed_by: (Home/Settings/Both)
+          persistence_key: (none or storage key)
+          invariants: (validation and allowed transitions)
+      integration_rules:
+        - rule:
+          rationale:
     external_dependencies: (EMPTY unless persistent storage required, then ONLY @react-native-async-storage/async-storage)
     files:
       - path: (src/content/X.js and optional src/shared/X.js or src/utils/X.js)
@@ -73,6 +86,7 @@ design_architecture:
       - Agent may add shared files under src/shared when functionality is reused across pages
       - Shared modules must be imported consistently by both pages when applicable
       - Architecture must ensure no page references missing exports, handlers, or helpers
+      - shared_state_contract must include all cross-screen variables and ownership semantics
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
       - Architecture must map all planned features to files (Home/Settings/shared/utils) without orphaned feature logic
@@ -85,13 +99,18 @@ design_architecture:
   expected_output: >
     Complete content-layer blueprint with 6-14 files focused on Home/Settings content,
     template shell preserved, robust feature mapping, and no invalid dependencies.
-    Blueprint must fully cover all planned features with concrete implementation paths.
+    Blueprint must fully cover all planned features with concrete implementation paths,
+    including an explicit shared_state_contract for variables used across Home and Settings.
   agent: architect
   context: [plan_requirements]
 
-implement_mvp_features:
+implement_home_screen:
   description: >
-    Implement the content-layer architecture blueprint (6-14 files, compact reliable code).
+    Implement Home first using the architecture blueprint and shared_state_contract.
+    Home phase scope:
+    - src/content/HomeContent.js
+    - any required src/shared/* and src/utils/* files needed by Home and later Settings
+    - DO NOT write src/content/SettingsContent.js in this phase
     Hard rules:
     - Create ONLY files listed in architecture.files and in specified quantities
     - JSX only (no TypeScript/TSX)
@@ -100,9 +119,9 @@ implement_mvp_features:
       * Content files: 25-110 lines each
       * Shared/utils files: 20-100 lines each
     - NO skeleton code or TODOs. Everything must work as written.
-    - Implement all planned features completely end-to-end (UI + state + handlers)
-    - Ensure each feature is production-grade in behavior, not just visually present
-    - If logic/UI is reused across pages, extract shared modules to avoid duplicated and inconsistent behavior
+    - Implement all Home-targeted planned features completely end-to-end (UI + state + handlers)
+    - Establish shared_state_contract variables exactly as designed by architect
+    - If logic/UI is reused across pages, extract shared modules with stable exports for Settings phase
     - CRITICAL: For each file, use ONLY imports in allowed_imports.
       Before writing each file, verify every import is whitelisted.
       FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
@@ -141,10 +160,39 @@ implement_mvp_features:
     10) NEVER output markdown/json fences before tool calls; send direct tool calls only
     Final response after all tool calls: DONE
   expected_output: >
-    Implemented 6-14 files in src/content and optional src/shared/src/utils,
+    Implemented Home phase files (Home content plus shared foundations),
+    shared_state_contract established for cross-screen reuse,
     template shell preserved unchanged, all imports verified,
     external_dependencies honored (empty or just async-storage),
-    no invalid dependencies, polished Home/Settings content UX, and complete planned feature delivery, final response DONE.
-  agent: feature_builder
+    no invalid dependencies, polished Home UX, final response DONE.
+  agent: home_screen_builder
   context: [design_architecture]
+
+implement_settings_screen:
+  description: >
+    Implement Settings second, after Home phase is complete.
+    Settings phase scope:
+    - MUST implement src/content/SettingsContent.js
+    - MAY update shared/src/utils files only if needed for shared_state_contract compliance
+    - MUST preserve Home behavior and shared variable compatibility
+    Hard rules:
+    - Create/update ONLY files listed in architecture.files and in specified quantities
+    - JSX only (no TypeScript/TSX)
+    - Keep shared_state_contract keys, defaults, and update semantics stable unless explicitly allowed
+    - Write complete, production-quality code without TODOs/placeholders
+    - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
+    - Use ONLY imports declared in allowed_imports for each file
+    - Preserve App.js and index.js unchanged
+    Tool usage:
+    1) Use file_writer for one file at a time
+    1.1) Emit exactly one file_writer call per assistant response
+    1.2) Wait for each write success before next file
+    1.3) Never batch multiple writes
+    Final response after all tool calls: DONE
+  expected_output: >
+    Implemented Settings phase files with shared contract compatibility,
+    Home behavior preserved, template shell unchanged, imports verified,
+    polished Settings UX, and final response DONE.
+  agent: settings_screen_builder
+  context: [design_architecture, implement_home_screen]
 

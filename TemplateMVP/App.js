@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import HomeContent from './src/content/HomeContent';
 import SettingsContent from './src/content/SettingsContent';
 
 const NAV_ITEMS = [
-  { key: 'home', label: 'Home', icon: '⌂' },
-  { key: 'settings', label: 'Settings', icon: '⚙' },
+  { key: 'home', label: 'Home', icon: 'home-outline' },
+  { key: 'settings', label: 'Settings', icon: 'settings-outline' },
 ];
 
 export default function App() {
@@ -46,7 +47,11 @@ export default function App() {
               onPress={() => setActiveScreen(item.key)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.navIcon, isActive && styles.navActive]}>{item.icon}</Text>
+              <Ionicons
+                name={item.icon}
+                size={18}
+                style={[styles.navIcon, isActive && styles.navActive]}
+              />
               <Text style={[styles.navLabel, isActive && styles.navActive]}>{item.label}</Text>
             </TouchableOpacity>
           );

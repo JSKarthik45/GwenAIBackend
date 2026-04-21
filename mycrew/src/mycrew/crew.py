@@ -18,6 +18,13 @@ def _required_llm_env(name: str) -> str:
     return value
 
 
+def _optional_llm_env(name: str, fallback_env: str) -> str:
+    value = os.getenv(name)
+    if value:
+        return value
+    return _required_llm_env(fallback_env)
+
+
 def _int_env(name: str, default: int) -> int:
     raw = os.getenv(name)
     if raw is None:
@@ -57,16 +64,16 @@ class Mycrew():
         )
 
     @agent
-    def feature_builder(self) -> Agent:
+    def home_screen_builder(self) -> Agent:
         feature_llm = LLM(
-            model=_required_llm_env("FEATURE_BUILDER_LLM"),
+            model=_optional_llm_env("HOME_SCREEN_BUILDER_LLM", "FEATURE_BUILDER_LLM"),
             temperature=0,
         )
         # Strict limits to prevent request payloads exceeding Groq's tool parameter limit.
         # Fewer iterations + output length limit = smaller context accumulation.
-        max_iter = max(_int_env("FEATURE_MAX_ITER", 8), 5)
+        max_iter = max(_int_env("HOME_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 8)), 5)
         return Agent(
-            config=self.agents_config['feature_builder'], 
+            config=self.agents_config['home_screen_builder'],
             llm=feature_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,  # Disable verbose to reduce context size
@@ -76,6 +83,26 @@ class Mycrew():
             allow_delegation=False,
             memory=False,
             respect_context_window=True,  # Auto-truncate if needed
+        )
+
+    @agent
+    def settings_screen_builder(self) -> Agent:
+        feature_llm = LLM(
+            model=_optional_llm_env("SETTINGS_SCREEN_BUILDER_LLM", "FEATURE_BUILDER_LLM"),
+            temperature=0,
+        )
+        max_iter = max(_int_env("SETTINGS_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 8)), 5)
+        return Agent(
+            config=self.agents_config['settings_screen_builder'],
+            llm=feature_llm,
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+            verbose=False,
+            max_iter=max_iter,
+            max_tokens=1400,
+            max_retry_limit=1,
+            allow_delegation=False,
+            memory=False,
+            respect_context_window=True,
         )
 
     @task
@@ -91,9 +118,16 @@ class Mycrew():
         )
 
     @task
-    def implement_mvp_features(self) -> Task:
+    def implement_home_screen(self) -> Task:
         return Task(
-            config=self.tasks_config['implement_mvp_features'],  
+            config=self.tasks_config['implement_home_screen'],
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+        )
+
+    @task
+    def implement_settings_screen(self) -> Task:
+        return Task(
+            config=self.tasks_config['implement_settings_screen'],
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
         )
 
