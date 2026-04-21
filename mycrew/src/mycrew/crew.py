@@ -140,6 +140,6 @@ class Mycrew():
             process=Process.sequential,
             planning=False,
             verbose=True,
-            max_rpm=10,
+            max_rpm=2,
             cache=True,
         )
