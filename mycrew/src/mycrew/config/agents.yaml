@@ -55,13 +55,15 @@ architect:
       - exports
       - state/props (which component manages what state)
       - handlers (functions, event logic)
-      - allowed_imports (explicit whitelist - see rules below)
+      - allowed_imports (package/module whitelist - see rules below)
+      - local_import_paths (ONLY relative imports used by that file, each must start with ./ or ../)
     Your architecture must:
       - prevent fragile edge-case behavior
       - keep data flow clear and maintainable
       - define handling for empty/error/validation states where relevant
       - extract shared logic/UI when used across both pages to reduce breakage risk
       - guarantee both Home and Settings render successfully with all shared imports resolved
+      - enforce Metro-safe import paths compatible with Expo Go and Snack (no alias config assumed)
     CORE WHITELIST - Always safe:
       - react (hooks: useState, useEffect, useCallback, useReducer)
       - react-native (standard exports: View, Text, StyleSheet, Button, TextInput, etc)
@@ -70,6 +72,7 @@ architect:
       - allowed_imports (in storage utils file): ["react-native", "@react-native-async-storage/async-storage"]
     STRICTLY FORBIDDEN (cause import errors):
       - expo/storage, expo/filesystem, expo-sqlite (THESE DO NOT EXIST)
+      - Absolute local import aliases like "src/..." or "/src/..."
       - Any @react-native-* package NOT in external_dependencies
       - Navigation libraries (react-navigation)
       - External state management (Redux, MobX, Zustand, Context API)
@@ -105,6 +108,9 @@ home_screen_builder:
       9) CRITICAL import rules:
          - Use ONLY modules in each file's allowed_imports
          - Never add imports not in allowed_imports
+        - For local project files, import ONLY with relative paths beginning with ./ or ../
+        - NEVER use absolute local imports like "src/..." or "/src/..."
+        - Ensure each local relative import resolves to a file that exists in architecture.files
          - FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation
       10) Do NOT call track_dependency. Architecture controls dependencies.
       11) If async-storage is allowed, isolate persistence in src/utils/storage.js
@@ -141,6 +147,9 @@ settings_screen_builder:
       7) CRITICAL import rules:
          - Use ONLY modules in each file's allowed_imports
          - Never add imports not in allowed_imports
+        - For local project files, import ONLY with relative paths beginning with ./ or ../
+        - NEVER use absolute local imports like "src/..." or "/src/..."
+        - Ensure each local relative import resolves to an existing file before writing
          - FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation
       8) Do NOT call track_dependency. Architecture controls dependencies.
       9) If async-storage is allowed, keep storage usage inside src/utils/storage.js

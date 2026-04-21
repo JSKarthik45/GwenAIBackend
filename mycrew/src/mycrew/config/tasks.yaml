@@ -79,6 +79,7 @@ design_architecture:
         state/hooks: (which useState/hooks this file uses)
         handlers:
         allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
+        local_import_paths: (ONLY relative paths like ./foo or ../shared/foo; never src/...)
     VALIDATION:
       - Must include exactly 2 content files: src/content/HomeContent.js and src/content/SettingsContent.js
       - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
@@ -86,6 +87,8 @@ design_architecture:
       - Agent may add shared files under src/shared when functionality is reused across pages
       - Shared modules must be imported consistently by both pages when applicable
       - Architecture must ensure no page references missing exports, handlers, or helpers
+      - All local file imports MUST be relative (./ or ../), never absolute aliases like src/...
+      - Every local import path must resolve to an existing file in architecture.files
       - shared_state_contract must include all cross-screen variables and ownership semantics
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
@@ -127,6 +130,8 @@ implement_home_screen:
       FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
       ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
+    - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
+    - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
     - Proper styling (StyleSheet), event handlers, and high-quality UX polish in content blocks
     - Ensure content layout looks refined on both common phone sizes and larger devices
@@ -154,6 +159,7 @@ implement_home_screen:
     4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
     5) Do not output code in chat; only use file_writer
     6) CRITICAL: Validate every import against allowed_imports before writing code
+    6.1) Validate every local import path is relative (./ or ../) and file-resolvable
     7) If persistent storage used, create src/utils/storage.js with all AsyncStorage logic
     8) Keep each file payload compact (<~90 lines) to avoid tool-call JSON failures
     9) If a feature needs too much code, split logic into additional shared/helper files listed in architecture
@@ -182,6 +188,8 @@ implement_settings_screen:
     - Write complete, production-quality code without TODOs/placeholders
     - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
     - Use ONLY imports declared in allowed_imports for each file
+    - Local file imports MUST be relative (./ or ../), never alias imports like src/...
+    - Ensure each local import resolves to an existing generated file
     - Preserve App.js and index.js unchanged
     Tool usage:
     1) Use file_writer for one file at a time
