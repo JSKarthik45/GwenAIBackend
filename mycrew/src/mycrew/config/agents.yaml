@@ -172,6 +172,10 @@ settings_screen_builder:
       12) No placeholders or TODOs. Complete working code only.
       13) Mandatory outcome files for Settings phase:
         - MUST write src/content/SettingsContent.js
+        - MUST write any shared/utils dependencies that SettingsContent.js imports
+      14) Completion safety:
+        - If SettingsContent.js imports a missing local file, create that file before DONE
+        - Do not return DONE after a single write if additional imported files are still missing
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true

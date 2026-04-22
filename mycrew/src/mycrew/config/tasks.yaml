@@ -222,6 +222,18 @@ implement_settings_screen:
       If multiple files are needed, write exactly one file per response and wait for success before the next file.
     1.14) COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
        Never emit a shorthand path, bracketed filename, or partial tool argument.
+    1.15) Process architecture.files as a strict loop:
+      - Step A: Validate file imports against allowed_imports
+      - Step B: Write that single file with file_writer
+      - Step C: Wait for SUCCESS confirmation from tool output
+      - Step D: Move to next file only after SUCCESS
+    1.16) Keep each file payload compact (<~90 lines) to reduce malformed tool-call risk.
+    1.17) NEVER output markdown/json fences before tool calls; send direct tool calls only.
+    1.18) No placeholders or TODOs. Complete working code only.
+    1.19) Required completion safety:
+      - MUST write src/content/SettingsContent.js
+      - MUST write any shared/utils dependencies imported by SettingsContent.js
+      - If imports are missing after write, create missing files before DONE
     Final response after all tool calls: DONE
   expected_output: >
     Implemented Settings phase files with shared contract compatibility,
