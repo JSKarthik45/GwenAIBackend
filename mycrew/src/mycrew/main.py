@@ -165,7 +165,7 @@ def _resolve_debugger_model() -> str:
 def debugger_throttle(step_output) -> None:
     """Throttle only debugger agent steps to reduce provider TPM spikes."""
     _ = step_output
-    time.sleep(30)
+    time.sleep(65)
 
 
 def _append_debug_runtime_task(crew_builder: Mycrew, crew_instance) -> None:
