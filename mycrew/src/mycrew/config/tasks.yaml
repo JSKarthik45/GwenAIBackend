@@ -232,8 +232,8 @@ implement_settings_screen:
 
 debug_runtime_logic:
   description: >-
-  0. CONTEXT ISOLATION RULE: Do not look at previous task outputs. Use only file_reader results from current disk state.
-    Audit files as they exist now, not how they were built.
+   0. CONTEXT ISOLATION RULE: Do not look at previous task outputs. Use only file_reader results from current disk state.
+     Audit files as they exist now, not how they were built.
    1. Use 'file_reader' to scan files one at a time only. Do not batch reads.
    2. You are strictly forbidden from outputting more than ONE tool call per response.
      You must never use a JSON array for tool calls.
