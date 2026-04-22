@@ -165,7 +165,7 @@ def _resolve_debugger_model() -> str:
 def debugger_throttle(step_output) -> None:
     """Throttle only debugger agent steps to reduce provider TPM spikes."""
     _ = step_output
-    time.sleep(65)
+    time.sleep(10)
 
 
 def _append_debug_runtime_task(crew_builder: Mycrew, crew_instance) -> None:
@@ -192,6 +192,7 @@ def _append_debug_runtime_task(crew_builder: Mycrew, crew_instance) -> None:
         config=crew_builder.tasks_config["debug_runtime_logic"],
         agent=debugger_agent,
         tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+        context=[],
     )
 
     crew_instance.agents.append(debugger_agent)
