@@ -105,6 +105,25 @@ class Mycrew():
             respect_context_window=True,
         )
 
+    @agent
+    def react_native_debugger(self) -> Agent:
+        debugger_llm = LLM(
+            model=_optional_llm_env("REACT_NATIVE_DEBUGGER_LLM", "FEATURE_BUILDER_LLM"),
+            temperature=0,
+        )
+        return Agent(
+            config=self.agents_config['react_native_debugger'],
+            llm=debugger_llm,
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+            verbose=False,
+            max_iter=6,
+            max_tokens=1400,
+            max_retry_limit=1,
+            allow_delegation=False,
+            memory=False,
+            respect_context_window=True,
+        )
+
     @task
     def plan_requirements(self) -> Task:
         return Task(
