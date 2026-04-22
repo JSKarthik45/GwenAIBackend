@@ -226,20 +226,27 @@ implement_settings_screen:
 debug_runtime_logic:
   description: >-
    1. Use 'file_reader' to scan files one at a time only. Do not batch reads.
-   2. Start with 'src/content/HomeContent.js' only, then proceed to the next file in a later response.
-   3. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
-   4. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
-   5. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
-   6. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
-   7. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
+   2. You are strictly forbidden from outputting more than ONE tool call per response.
+     You must never use a JSON array for tool calls.
+     If you need to fix three files, fix the first one, wait for SUCCESS, and only then proceed to the next in a separate turn.
+   3. Start by calling file_reader for src/content/HomeContent.js only.
+     Read it, analyze it, and if it needs a fix, call file_writer.
+     Only after HomeContent.js is fully verified and fixed may you move to src/content/SettingsContent.js.
+   4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
+   5. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
+   6. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
+   7. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
+   8. NO HALLUCINATED FUNCTIONS RULE: Do not use placeholder functions like loadTodoItemsFromStorage().
+     If a function is needed, it must be explicitly defined in the code you write.
+   9. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
      Your first response MUST be a file_reader tool call to inspect the codebase.
-   8. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
-     you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
-   9. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
-     If multiple files are needed, handle exactly one file per response and wait for success before the next file.
-   10. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
+   10. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
+      you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
+   11. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
+      If multiple files are needed, handle exactly one file per response and wait for success before the next file.
+   12. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
       Never emit a shorthand path, bracketed filename, or partial tool argument.
-   11. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
+   13. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
       Any text-only response without tool calls is a FAILURE.
   expected_output: >-
     A crash-free codebase. All imports are resolved, and all list items have IDs.
