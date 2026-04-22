@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from crewai import Agent, LLM, Task
@@ -161,6 +162,12 @@ def _resolve_debugger_model() -> str:
     )
 
 
+def debugger_throttle(step_output) -> None:
+    """Throttle only debugger agent steps to reduce provider TPM spikes."""
+    _ = step_output
+    time.sleep(30)
+
+
 def _append_debug_runtime_task(crew_builder: Mycrew, crew_instance) -> None:
     """Initialize the runtime debugger agent and append its task as the final crew step."""
     if "react_native_debugger" not in crew_builder.agents_config:
@@ -172,6 +179,7 @@ def _append_debug_runtime_task(crew_builder: Mycrew, crew_instance) -> None:
         config=crew_builder.agents_config["react_native_debugger"],
         llm=LLM(model=_resolve_debugger_model(), temperature=0),
         tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+        step_callback=debugger_throttle,
         verbose=False,
         max_iter=6,
         max_tokens=1400,
