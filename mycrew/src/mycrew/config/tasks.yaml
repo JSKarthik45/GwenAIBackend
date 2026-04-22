@@ -169,6 +169,10 @@ implement_home_screen:
       - src/content/HomeContent.js
       - plus any files imported by HomeContent.js
     13) CRITICAL FAILURE RULE: Do not return DONE until every Home-phase file in architecture.files is written or confirmed unnecessary by zero imports.
+    14) NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
+        If multiple files are needed, write exactly one file per response and wait for success before the next file.
+    15) COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
+        Never emit a shorthand path, bracketed filename, or partial tool argument.
     Final response after all tool calls: DONE
   expected_output: >
     Implemented Home phase files (Home content plus shared foundations),
@@ -207,6 +211,10 @@ implement_settings_screen:
     1.6) CRITICAL FAILURE RULE: Do not return DONE until every Settings-phase file in architecture.files is written or confirmed unnecessary by zero imports.
     1.7) Before returning DONE, verify that every local import used by src/content/SettingsContent.js resolves to an existing file under src/shared or src/utils; if not, create missing modules first.
     1.8) Also verify import/export compatibility for every SettingsContent local import: if importing a named symbol, that symbol must be exported by the target module; if importing default, target must export default.
+    1.9) NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
+      If multiple files are needed, write exactly one file per response and wait for success before the next file.
+    1.10) COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
+       Never emit a shorthand path, bracketed filename, or partial tool argument.
     Final response after all tool calls: DONE
   expected_output: >
     Implemented Settings phase files with shared contract compatibility,
@@ -217,18 +225,22 @@ implement_settings_screen:
 
 debug_runtime_logic:
   description: >-
-    1. Use 'file_reader' to scan all files created in 'src/content/', 'src/shared/', and 'src/utils/'.
-    2. CROSS-CHECK IMPORTS: Open 'src/content/HomeContent.js' and 'src/content/SettingsContent.js'.
-       For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
-    3. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
-    4. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
-    5. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
-    6. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
-       Your first response MUST be a file_reader tool call to inspect the codebase.
-    7. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
-       you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
-    8. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
-       Any text-only response without tool calls is a FAILURE.
+   1. Use 'file_reader' to scan files one at a time only. Do not batch reads.
+   2. Start with 'src/content/HomeContent.js' only, then proceed to the next file in a later response.
+   3. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
+   4. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
+   5. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
+   6. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
+   7. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
+     Your first response MUST be a file_reader tool call to inspect the codebase.
+   8. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
+     you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
+   9. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
+     If multiple files are needed, handle exactly one file per response and wait for success before the next file.
+   10. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
+      Never emit a shorthand path, bracketed filename, or partial tool argument.
+   11. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
+      Any text-only response without tool calls is a FAILURE.
   expected_output: >-
     A crash-free codebase. All imports are resolved, and all list items have IDs.
     Return 'DONE' only after all identified bugs are patched and all required verification/repair tool calls have been executed.
