@@ -223,14 +223,14 @@ debug_runtime_logic:
     3. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
     4. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
     5. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
-   6. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
-     Your first response MUST be a file_reader tool call to inspect the codebase.
-   7. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
-     you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
-   8. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
-     Any text-only response without tool calls is a FAILURE.
+    6. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
+       Your first response MUST be a file_reader tool call to inspect the codebase.
+    7. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
+       you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
+    8. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
+       Any text-only response without tool calls is a FAILURE.
   expected_output: >-
     A crash-free codebase. All imports are resolved, and all list items have IDs.
-   Return 'DONE' only after all identified bugs are patched and all required verification/repair tool calls have been executed.
+    Return 'DONE' only after all identified bugs are patched and all required verification/repair tool calls have been executed.
   agent: react_native_debugger
 
