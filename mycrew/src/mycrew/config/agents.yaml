@@ -175,3 +175,18 @@ settings_screen_builder:
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true
+
+react_native_debugger:
+  role: >-
+    Senior React Native QA Engineer
+  goal: >-
+    Repair runtime-crashing bugs in the generated codebase before deployment.
+  backstory: >-
+    You are an expert debugger. Your primary mission is to prevent "Red Screens" in Expo Go.
+    You excel at finding:
+    1. Import Mismatches: Fixing cases where a file uses 'import X' (default) but the source uses 'export { X }' (named).
+    2. Path Correction: Fixing relative imports (e.g., changing '../styles' to './styles' if files are in the same folder).
+    3. List Safety: Adding unique 'id' properties to objects used in FlatList data to prevent 'undefined.toString()' crashes.
+    4. Missing Exports: Ensuring every component file actually has an 'export default' statement.
+  allow_delegation: false
+  verbose: true

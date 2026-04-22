@@ -215,3 +215,16 @@ implement_settings_screen:
   agent: settings_screen_builder
   context: [design_architecture, implement_home_screen]
 
+debug_runtime_logic:
+  description: >-
+    1. Use 'file_reader' to scan all files created in 'src/content/', 'src/shared/', and 'src/utils/'.
+    2. CROSS-CHECK IMPORTS: Open 'src/content/HomeContent.js' and 'src/content/SettingsContent.js'.
+       For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
+    3. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
+    4. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
+    5. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
+  expected_output: >-
+    A crash-free codebase. All imports are resolved, and all list items have IDs.
+    Return 'DONE' only after all identified bugs are patched.
+  agent: react_native_debugger
+

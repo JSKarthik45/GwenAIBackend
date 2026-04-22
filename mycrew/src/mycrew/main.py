@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from crewai import Agent, LLM, Task
 from dotenv import load_dotenv
 
 # Ensure the package root (…/mycrew/src) is on sys.path when run directly
@@ -17,6 +18,9 @@ if str(_PKG_ROOT) not in sys.path:
 
 from mycrew.crew import Mycrew
 from mycrew.tools.custom_tool import (
+    FileReaderTool,
+    FileWriterTool,
+    TrackDependencyTool,
     set_base_output_path,
     remove_default_src_files,
 )
@@ -116,7 +120,10 @@ def _run_crew_with_retries(inputs: dict[str, str]) -> None:
     for attempt in range(1, attempts + 1):
         try:
             print(f"[Crew Attempt {attempt}/{attempts}] Starting crew kickoff...")
-            Mycrew().crew().kickoff(inputs=inputs)
+            crew_builder = Mycrew()
+            crew_instance = crew_builder.crew()
+            _append_debug_runtime_task(crew_builder, crew_instance)
+            crew_instance.kickoff(inputs=inputs)
             print(f"[Crew Attempt {attempt}/{attempts}] ✅ Success!")
             return
         except Exception as exc:
@@ -135,6 +142,52 @@ def _run_crew_with_retries(inputs: dict[str, str]) -> None:
             # No retry: either not a tool error, or out of attempts
             print(f"[Crew Attempt {attempt}/{attempts}] ❌ Failed (retryable={is_retryable}, attempts_left={has_attempts_left})")
             raise
+
+
+def _resolve_debugger_model() -> str:
+    """Resolve model for runtime debugger agent with safe fallbacks."""
+    for env_name in (
+        "REACT_NATIVE_DEBUGGER_LLM",
+        "FEATURE_BUILDER_LLM",
+        "SETTINGS_SCREEN_BUILDER_LLM",
+        "HOME_SCREEN_BUILDER_LLM",
+    ):
+        value = os.getenv(env_name)
+        if value:
+            return value
+    raise ValueError(
+        "Missing required LLM environment variable for debugger agent: "
+        "set REACT_NATIVE_DEBUGGER_LLM or FEATURE_BUILDER_LLM"
+    )
+
+
+def _append_debug_runtime_task(crew_builder: Mycrew, crew_instance) -> None:
+    """Initialize the runtime debugger agent and append its task as the final crew step."""
+    if "react_native_debugger" not in crew_builder.agents_config:
+        raise ValueError("agents.yaml missing required key: react_native_debugger")
+    if "debug_runtime_logic" not in crew_builder.tasks_config:
+        raise ValueError("tasks.yaml missing required key: debug_runtime_logic")
+
+    debugger_agent = Agent(
+        config=crew_builder.agents_config["react_native_debugger"],
+        llm=LLM(model=_resolve_debugger_model(), temperature=0),
+        tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+        verbose=False,
+        max_iter=6,
+        max_tokens=1400,
+        max_retry_limit=1,
+        allow_delegation=False,
+        memory=False,
+        respect_context_window=True,
+    )
+    debug_task = Task(
+        config=crew_builder.tasks_config["debug_runtime_logic"],
+        agent=debugger_agent,
+        tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+    )
+
+    crew_instance.agents.append(debugger_agent)
+    crew_instance.tasks.append(debug_task)
 
 def create_index_js() -> None:
     """Preserve template index.js entry point (App.js at root)."""
@@ -443,6 +496,30 @@ def _find_invalid_import_contracts(entry_file: Path) -> list[str]:
     return invalid
 
 
+def _contains_import_without_export(source: str) -> bool:
+    """Detect JS modules that import from elsewhere but export nothing."""
+    has_import = bool(re.search(r"^\s*import\s+.+\s+from\s+['\"][^'\"]+['\"]\s*;?\s*$", source, re.M))
+    has_export = bool(re.search(r"\bexport\s+(default|\{|\*|const|let|var|function|class)\b", source))
+    return has_import and not has_export
+
+
+def _find_import_without_export_modules(base_output: Path) -> list[str]:
+    """Find JS modules under src/content|shared|utils with imports but no exports."""
+    root = base_output / "src"
+    scan_dirs = [root / "content", root / "shared", root / "utils"]
+    invalid_modules: list[str] = []
+
+    for scan_dir in scan_dirs:
+        if not scan_dir.exists():
+            continue
+        for file_path in scan_dir.rglob("*.js"):
+            source = file_path.read_text(encoding="utf-8")
+            if _contains_import_without_export(source):
+                invalid_modules.append(str(file_path.relative_to(base_output)).replace("\\", "/"))
+
+    return invalid_modules
+
+
 def _ensure_non_template_content() -> None:
     """Guarantee Home/Settings content files exist with usable, resolvable implementation.
 
@@ -483,6 +560,12 @@ def _ensure_non_template_content() -> None:
         if settings_invalid_contracts:
             print(f"⚠ SettingsContent import/export contract issues: {settings_invalid_contracts}")
             settings_needs_fallback = True
+
+    modules_missing_exports = _find_import_without_export_modules(TOOL_BASE_OUTPUT)
+    if modules_missing_exports:
+        print(f"⚠ JS modules with import statements but no exports: {modules_missing_exports}")
+        home_needs_fallback = True
+        settings_needs_fallback = True
 
     if not (home_needs_fallback or settings_needs_fallback):
         print("✓ Content verification passed: non-template files with resolved local imports.")
