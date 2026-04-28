@@ -71,14 +71,14 @@ class Mycrew():
         )
         # Strict limits to prevent request payloads exceeding Groq's tool parameter limit.
         # Fewer iterations + output length limit = smaller context accumulation.
-        max_iter = max(_int_env("HOME_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 8)), 5)
+        max_iter = max(_int_env("HOME_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 6)), 4)
         return Agent(
             config=self.agents_config['home_screen_builder'],
             llm=feature_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,  # Disable verbose to reduce context size
             max_iter=max_iter,
-            max_tokens=1400,  # Allow slightly richer per-step reasoning
+            max_tokens=900,  # Keep outputs compact to avoid tool payload errors
             max_retry_limit=1,  # Reduce repeated oversized retries
             allow_delegation=False,
             memory=False,
@@ -91,14 +91,14 @@ class Mycrew():
             model=_optional_llm_env("SETTINGS_SCREEN_BUILDER_LLM", "FEATURE_BUILDER_LLM"),
             temperature=0,
         )
-        max_iter = max(_int_env("SETTINGS_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 8)), 5)
+        max_iter = max(_int_env("SETTINGS_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 6)), 4)
         return Agent(
             config=self.agents_config['settings_screen_builder'],
             llm=feature_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,
             max_iter=max_iter,
-            max_tokens=1400,
+            max_tokens=900,
             max_retry_limit=1,
             allow_delegation=False,
             memory=False,
@@ -116,8 +116,8 @@ class Mycrew():
             llm=debugger_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,
-            max_iter=6,
-            max_tokens=1400,
+            max_iter=4,
+            max_tokens=900,
             max_retry_limit=1,
             allow_delegation=False,
             memory=False,

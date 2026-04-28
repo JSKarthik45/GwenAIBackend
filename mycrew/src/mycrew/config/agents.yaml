@@ -14,6 +14,9 @@ planner:
     CRITICAL RUNTIME SAFETY: For any list-based feature (todo, notes, reminders),
     require stable unique IDs, non-empty input validation, and safe empty states to
     prevent crashes on add/submit.
+    SCOPE LOCK: Only plan features explicitly supported by the user's prompt.
+    Do NOT introduce unrelated modules (e.g., todo lists in a calculator app).
+    PERSISTENCE RULE: Only include persistence if the prompt explicitly asks for it.
   backstory: >
     You specialize in scoping content-first Expo MVP experiences inside existing app shells.
     You keep scope practical while supporting multiple content surfaces.
@@ -84,6 +87,11 @@ architect:
       - Any @react-native-* package NOT in external_dependencies
       - Navigation libraries (react-navigation)
       - External state management (Redux, MobX, Zustand, Context API)
+      - Deprecated core components: Picker (use of Picker is forbidden)
+      - AsyncStorage named import (must be default import when allowed)
+      - Web-only JSX elements (button, div, span, input, form)
+    SCOPE LOCK: Architecture must implement only features present in the prompt.
+    PERSISTENCE RULE: If prompt does not request persistence, external_dependencies MUST be empty.
     Decision Logic:
       - If persistent storage needed → include external_dependencies, allow async-storage
       - If no persistence → empty external_dependencies, react + react-native only
@@ -96,6 +104,10 @@ architect:
       - All local imports must be relative and must include valid file extensions (.js)
       - Never use dot-joined pseudo paths like "src/content/utils.mathUtils.js"
       - Every local import path must exactly match a file listed in architecture.files
+    COMPLETENESS RULES:
+      - Every import must point to a file that is explicitly listed in architecture.files
+      - Do not include any placeholder components or utility names without defining them in files
+      - Do not include TODOs or "implement later" placeholders in any file specs
   allow_delegation: false
   verbose: true
 
@@ -131,6 +143,8 @@ home_screen_builder:
         - Use correct relative path segmenting, never dot-joined pseudo paths (e.g. "utils.mathUtils")
         - Include .js extension when importing local utils/shared files to avoid Metro resolution issues
          - FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation
+        - FORBIDDEN: Picker from react-native
+        - If AsyncStorage is allowed, it MUST be default import and ONLY in src/utils/storage.js
       10) Do NOT call track_dependency. Architecture controls dependencies.
       11) If async-storage is allowed, isolate persistence in src/utils/storage.js
       12) MUST NOT edit App.js or index.js
@@ -147,6 +161,19 @@ home_screen_builder:
         - Never output markdown, code fences, checklists, or "Step 1" style prose
         - If tool call fails, retry with smaller file payload; do not switch to prose
       14) No placeholders or TODOs. Complete working code only.
+      14.1) COMPLETENESS:
+        - If HomeContent imports any shared/utils module, you MUST create that file
+        - Do not reference any component/module that does not exist on disk
+      14.2) IMPORT INTEGRITY:
+        - Every JSX component used must be imported from react-native or local modules
+        - Do not use TextInput, Button, Pressable, etc without importing them
+        - Never use web-only elements like <button>
+      14.3) SCOPE LOCK:
+        - Do not introduce features or modules not present in the architecture plan
+        - Do not add persistence unless explicitly defined in architecture
+      14.4) FINAL VALIDATION:
+        - Before DONE, re-check every local import in HomeContent.js resolves to an existing file
+        - If any import is missing, create the file and re-check
       15) Mandatory outcome files for Home phase:
         - MUST write src/content/HomeContent.js
         - MUST write any shared/utils dependencies that HomeContent imports
@@ -184,6 +211,8 @@ settings_screen_builder:
         - Use correct relative path segmenting, never dot-joined pseudo paths (e.g. "utils.mathUtils")
         - Include .js extension when importing local utils/shared files to avoid Metro resolution issues
          - FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation
+        - FORBIDDEN: Picker from react-native
+        - If AsyncStorage is allowed, it MUST be default import and ONLY in src/utils/storage.js
       8) Do NOT call track_dependency. Architecture controls dependencies.
       9) If async-storage is allowed, keep storage usage inside src/utils/storage.js
       10) MUST NOT edit App.js or index.js
@@ -205,6 +234,19 @@ settings_screen_builder:
       14) Completion safety:
         - If SettingsContent.js imports a missing local file, create that file before DONE
         - Do not return DONE after a single write if additional imported files are still missing
+      15) NO PLACEHOLDERS:
+         - Never include TODOs, placeholder comments, or stub logic that is not functional
+         - If an action is surfaced in UI, it must be wired to a real handler
+      16) IMPORT INTEGRITY:
+        - Every JSX component used must be imported from react-native or local modules
+        - Do not use TextInput, Button, Pressable, etc without importing them
+        - Never use web-only elements like <button>
+      17) SCOPE LOCK:
+        - Do not introduce features or modules not present in the architecture plan
+        - Do not add persistence unless explicitly defined in architecture
+      18) FINAL VALIDATION:
+        - Before DONE, re-check every local import in SettingsContent.js resolves to an existing file
+        - If any import is missing, create the file and re-check
     Final response after all tool calls: DONE
   allow_delegation: false
   verbose: true
@@ -224,5 +266,10 @@ react_native_debugger:
     3. List Safety: Adding unique 'id' properties to objects used in FlatList data to prevent 'undefined.toString()' crashes.
     4. Missing Exports: Ensuring every component file actually has an 'export default' statement.
     5. Unsafe handlers: Preventing onPress/onSubmit from calling undefined functions or mutating undefined lists.
+    6. Missing modules: If a local import resolves to a missing file, create the file or remove the import safely.
+    7. TODO placeholders: Remove or replace TODOs with functional logic.
+    8. Missing RN imports: Ensure every JSX component is imported (e.g., TextInput, Button, Pressable).
+    9. Web-only elements: Replace <button>/<div> with React Native components.
+    10. Import completeness: Re-scan after fixes; do not finish if any local import is unresolved.
   allow_delegation: false
   verbose: true

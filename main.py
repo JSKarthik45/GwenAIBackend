@@ -138,8 +138,16 @@ TTL_HOURS = 24  # Results expire after 24 hours
 PROMPT_DEDUPE_WINDOW_MINUTES = 15
 
 
+def _env_flag(name: str) -> bool:
+    raw = os.getenv(name, "").strip().lower()
+    return raw in {"1", "true", "yes", "y", "on"}
+
+
 def cleanup_generated_mvp_folder() -> None:
     """Delete GeneratedMVP folder after result persistence to free disk space."""
+    if _env_flag("KEEP_GENERATED_MVP") or _env_flag("LOCAL_TESTING"):
+        logger.info("[cleanup] Preserving GeneratedMVP for local testing")
+        return
     output_dir = Path(__file__).resolve().parent / "GeneratedMVP"
     if not output_dir.exists():
         logger.info("[cleanup] GeneratedMVP does not exist; skipping delete")
@@ -150,6 +158,78 @@ def cleanup_generated_mvp_folder() -> None:
         logger.info("[cleanup] Deleted GeneratedMVP after result save")
     except Exception as e:
         logger.warning(f"[cleanup] Failed to delete GeneratedMVP: {e}")
+
+
+def _resolve_local_module(base_file: Path, module_path: str) -> Path | None:
+    base_dir = base_file.parent
+    candidate = (base_dir / module_path).resolve()
+
+    if candidate.suffix:
+        return candidate if candidate.exists() else None
+
+    candidates = [
+        candidate.with_suffix(".js"),
+        candidate.with_suffix(".jsx"),
+        candidate / "index.js",
+        candidate / "index.jsx",
+    ]
+
+    for item in candidates:
+        if item.exists():
+            return item
+    return None
+
+
+def _collect_import_paths(source: str) -> list[str]:
+    pattern = re.compile(r"import\s+[^;]*?from\s+['\"]([^'\"]+)['\"]")
+    return pattern.findall(source)
+
+
+def validate_generated_mvp(app_dir: Path) -> dict:
+    """Basic validation for unresolved imports and invalid path patterns."""
+    report = {
+        "missing_local_imports": [],
+        "invalid_import_paths": [],
+    }
+
+    if not app_dir.exists():
+        report["invalid_import_paths"].append("app_dir_missing")
+        return report
+
+    scan_dirs = [
+        app_dir / "App.js",
+        app_dir / "src" / "content",
+        app_dir / "src" / "shared",
+        app_dir / "src" / "utils",
+    ]
+
+    files: list[Path] = []
+    for item in scan_dirs:
+        if item.is_file():
+            files.append(item)
+        elif item.exists():
+            files.extend(item.rglob("*.js"))
+
+    for file_path in files:
+        try:
+            source = file_path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+
+        for module_path in _collect_import_paths(source):
+            if module_path.startswith("src/") or module_path.startswith("/src/"):
+                report["invalid_import_paths"].append(f"{file_path.name} -> {module_path}")
+                continue
+
+            if re.search(r"/(content|shared|utils)\.[^/]+", module_path):
+                report["invalid_import_paths"].append(f"{file_path.name} -> {module_path}")
+                continue
+
+            if module_path.startswith("."):
+                if _resolve_local_module(file_path, module_path) is None:
+                    report["missing_local_imports"].append(f"{file_path.name} -> {module_path}")
+
+    return report
 
 
 def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
@@ -394,6 +474,15 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 # Mark as completed only after QR generation is done
                 results_dict[project_id]["data"]["status"] = "completed"
                 logger.info(f"[Task {project_id}] ✅ QR generated and status set to completed")
+
+                # Attach a basic validation report for local testing.
+                try:
+                    app_dir = Path(__file__).resolve().parent / "GeneratedMVP" / "MyApp"
+                    results_dict[project_id]["data"]["validation"] = validate_generated_mvp(app_dir)
+                except Exception as validation_error:
+                    results_dict[project_id]["data"]["validation"] = {
+                        "error": str(validation_error),
+                    }
                 
                 cleanup_generated_mvp_folder()
                 

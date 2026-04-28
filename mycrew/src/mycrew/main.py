@@ -529,7 +529,141 @@ def _find_import_without_export_modules(base_output: Path) -> list[str]:
     return invalid_modules
 
 
-def _ensure_non_template_content() -> None:
+def _build_stub_module(needs_default: bool, named_imports: set[str]) -> str:
+    lines: list[str] = []
+    if needs_default:
+        lines.append("import React from 'react';")
+        lines.append("")
+        lines.append("const Placeholder = () => null;")
+        lines.append("")
+        lines.append("export default Placeholder;")
+
+    if named_imports:
+        if lines:
+            lines.append("")
+
+        for name in sorted(named_imports):
+            if name in {"add", "subtract", "multiply", "divide"}:
+                op_map = {
+                    "add": "+",
+                    "subtract": "-",
+                    "multiply": "*",
+                    "divide": "/",
+                }
+                op = op_map[name]
+                lines.append(f"export const {name} = (a, b) => a {op} b;")
+            else:
+                lines.append(f"export const {name} = (...args) => (args.length ? args[0] : null);")
+
+    if not lines:
+        lines.append("export default () => null;")
+
+    return "\n".join(lines) + "\n"
+
+
+def _auto_fix_missing_modules(base_output: Path, persistence_allowed: bool) -> list[str]:
+    """Create minimal stub modules for missing local imports to prevent crashes."""
+    created: list[str] = []
+
+    scan_roots = [base_output / "src" / "content", base_output / "src" / "shared", base_output / "src" / "utils"]
+    for root in scan_roots:
+        if not root.exists():
+            continue
+
+        for file_path in root.rglob("*.js"):
+            source = file_path.read_text(encoding="utf-8")
+            for module_path, clause in _extract_local_import_specs(source):
+                target = _resolve_js_module(file_path, module_path)
+                if target is not None:
+                    continue
+
+                needs_default, named_imports, _ = _parse_import_clause(clause)
+                target_path = (file_path.parent / module_path).resolve()
+                if not target_path.suffix:
+                    target_path = target_path.with_suffix(".js")
+                if not persistence_allowed and target_path.name == "storage.js":
+                    continue
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                if not target_path.exists():
+                    target_path.write_text(_build_stub_module(needs_default, named_imports), encoding="utf-8")
+                    created.append(str(target_path.relative_to(base_output)).replace("\\", "/"))
+
+    return created
+
+
+def _repair_missing_import_paths(base_output: Path) -> list[str]:
+    """Rewrite local imports to point at existing shared/utils modules when mis-targeted."""
+    updated: list[str] = []
+
+    content_root = base_output / "src" / "content"
+    shared_root = base_output / "src" / "shared"
+    utils_root = base_output / "src" / "utils"
+
+    if not content_root.exists():
+        return updated
+
+    for file_path in content_root.rglob("*.js"):
+        source = file_path.read_text(encoding="utf-8")
+        import_specs = _extract_local_import_specs(source)
+        if not import_specs:
+            continue
+
+        new_source = source
+        changed = False
+
+        for module_path, clause in import_specs:
+            target = _resolve_js_module(file_path, module_path)
+            if target is not None:
+                continue
+
+            module_name = Path(module_path).name
+            shared_candidate = (shared_root / f"{module_name}.js")
+            utils_candidate = (utils_root / f"{module_name}.js")
+
+            replacement = None
+            if shared_candidate.exists():
+                replacement = f"../shared/{module_name}"
+            elif utils_candidate.exists():
+                replacement = f"../utils/{module_name}"
+
+            if replacement:
+                new_source = new_source.replace(
+                    f"from '{module_path}'",
+                    f"from '{replacement}'",
+                )
+                new_source = new_source.replace(
+                    f'from "{module_path}"',
+                    f'from "{replacement}"',
+                )
+                changed = True
+
+        if changed and new_source != source:
+            file_path.write_text(new_source, encoding="utf-8")
+            updated.append(str(file_path.relative_to(base_output)).replace("\\", "/"))
+
+    return updated
+
+
+def _prompt_disables_persistence(prompt: str) -> bool:
+    lowered = prompt.lower()
+    return "no persistence" in lowered or "no storage" in lowered
+
+
+def _prompt_is_todo(prompt: str) -> bool:
+    lowered = prompt.lower()
+    return "todo" in lowered or "task" in lowered
+
+
+def _matches_template_content(file_text: str, template_path: Path) -> bool:
+    try:
+        template_text = template_path.read_text(encoding="utf-8")
+    except Exception:
+        return False
+
+    return file_text.strip() == template_text.strip()
+
+
+def _ensure_non_template_content(content_prompt: str) -> None:
     """Guarantee Home/Settings content files exist with usable, resolvable implementation.
 
     If builders fail to write required files or reference missing local modules,
@@ -546,7 +680,8 @@ def _ensure_non_template_content() -> None:
 
     if home_file.exists():
         home_text = home_file.read_text(encoding="utf-8")
-        if "Home Content" in home_text and "Welcome!" in home_text:
+        template_home = TEMPLATE_CACHE_DIR / "src" / "content" / "HomeContent.js"
+        if _matches_template_content(home_text, template_home):
             home_needs_fallback = True
         home_missing_tree = _find_missing_dependency_edges(home_file)
         if home_missing_tree:
@@ -559,7 +694,8 @@ def _ensure_non_template_content() -> None:
 
     if settings_file.exists():
         settings_text = settings_file.read_text(encoding="utf-8")
-        if "Settings Content" in settings_text and "Customize your app" in settings_text:
+        template_settings = TEMPLATE_CACHE_DIR / "src" / "content" / "SettingsContent.js"
+        if _matches_template_content(settings_text, template_settings):
             settings_needs_fallback = True
         settings_missing_tree = _find_missing_dependency_edges(settings_file)
         if settings_missing_tree:
@@ -582,7 +718,10 @@ def _ensure_non_template_content() -> None:
 
     print("⚠ Builder output incomplete or invalid. Applying deterministic Home/Settings fallback files.")
 
-    if not storage_file.exists():
+    persistence_allowed = not _prompt_disables_persistence(content_prompt)
+    todo_mode = _prompt_is_todo(content_prompt)
+
+    if persistence_allowed and not storage_file.exists() and todo_mode:
         _write_file(
             storage_file,
             """import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -614,9 +753,10 @@ export { TODO_ITEMS_KEY, SETTINGS_KEY, saveJson, loadJson };
     )
 
     if home_needs_fallback:
-        _write_file(
-            home_file,
-            """import React, { useCallback, useEffect, useMemo, useState } from 'react';
+        if todo_mode and persistence_allowed:
+            _write_file(
+                home_file,
+                """import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { TODO_ITEMS_KEY, loadJson, saveJson } from '../utils/storage';
 
@@ -716,12 +856,49 @@ const styles = StyleSheet.create({
 
 export default HomeContent;
 """,
-        )
+            )
+        else:
+            _write_file(
+                home_file,
+                """import { StyleSheet, Text, View } from 'react-native';
+
+export default function HomeContent() {
+  return (
+    <View style={styles.card}>
+    <Text style={styles.title}>Home</Text>
+    <Text style={styles.body}>Calculator content will appear here.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 14,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e6f2',
+  },
+  title: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#20243a',
+    marginBottom: 8,
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4d536e',
+  },
+});
+""",
+            )
 
     if settings_needs_fallback:
-        _write_file(
-            settings_file,
-            """import React, { useCallback, useEffect, useState } from 'react';
+        if todo_mode and persistence_allowed:
+            _write_file(
+                settings_file,
+                """import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { SETTINGS_KEY, loadJson, saveJson } from '../utils/storage';
 
@@ -795,7 +972,43 @@ const styles = StyleSheet.create({
 
 export default SettingsContent;
 """,
-    )
+            )
+        else:
+            _write_file(
+                settings_file,
+                """import { StyleSheet, Text, View } from 'react-native';
+
+export default function SettingsContent() {
+  return (
+    <View style={styles.card}>
+    <Text style={styles.title}>Settings</Text>
+    <Text style={styles.body}>Adjust calculator preferences here.</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 14,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e3e6f2',
+  },
+  title: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: '#20243a',
+    marginBottom: 8,
+  },
+  body: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#4d536e',
+  },
+});
+""",
+            )
 
     print("✓ Deterministic fallback applied for missing/invalid content replacements.")
 
@@ -920,7 +1133,22 @@ def run(content_prompt: str = "Create a Todo App") -> str:
     _run_crew_with_retries(inputs)
 
     # Step 6: Guarantee generated app is not template-only if builders under-deliver.
-    _ensure_non_template_content()
+    _ensure_non_template_content(content_prompt)
+
+    # Step 6.1: Auto-create any missing local modules referenced by imports.
+    try:
+        from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT
+
+        repaired = _repair_missing_import_paths(TOOL_BASE_OUTPUT)
+        if repaired:
+            print(f"⚠ Repaired import paths: {repaired}")
+
+        persistence_allowed = not _prompt_disables_persistence(content_prompt)
+        created = _auto_fix_missing_modules(TOOL_BASE_OUTPUT, persistence_allowed)
+        if created:
+            print(f"⚠ Auto-created missing modules: {created}")
+    except Exception as auto_fix_error:
+        print(f"⚠ Auto-fix missing modules failed: {auto_fix_error}")
     
     # Step 7: Sync dependencies to package.json
     # Skipped for Snack SDK-only flow.
