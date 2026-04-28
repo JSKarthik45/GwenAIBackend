@@ -11,6 +11,9 @@ planner:
     Plan a richer MVP feature set (6-9 features) with concrete implementation-level details.
     NO authentication, NO backend calls.
     CRITICAL: Only suggest features using Expo SDK 54 available libraries.
+    CRITICAL RUNTIME SAFETY: For any list-based feature (todo, notes, reminders),
+    require stable unique IDs, non-empty input validation, and safe empty states to
+    prevent crashes on add/submit.
   backstory: >
     You specialize in scoping content-first Expo MVP experiences inside existing app shells.
     You keep scope practical while supporting multiple content surfaces.
@@ -27,6 +30,11 @@ planner:
       - Any @react-native-* package EXCEPT @react-native-async-storage/async-storage
     SAFE: React and React Native built-ins for content logic
            If persistent storage required: @react-native-async-storage/async-storage ONLY
+    Runtime safety rules:
+      - Any create/add handler must generate id: Date.now().toString() (or equivalent unique string)
+      - Any list rendering must use stable key/id (never index-only keys)
+      - Input validation must block empty/whitespace entries and show inline feedback
+      - Default list state must be an array (never undefined)
   allow_delegation: false
   verbose: true
 
@@ -80,6 +88,14 @@ architect:
       - If persistent storage needed → include external_dependencies, allow async-storage
       - If no persistence → empty external_dependencies, react + react-native only
     CRITICAL TEMPLATE RULE: Do not modify App.js, index.js, header/navbar shell components.
+    RUNTIME SAFETY RULES:
+      - If architecture includes list data, define item shape with required id: string
+      - Handlers must define add/update/remove behavior with validation and safe defaults
+      - List rendering must reference item.id for keys and avoid undefined access
+    PATH SAFETY RULES:
+      - All local imports must be relative and must include valid file extensions (.js)
+      - Never use dot-joined pseudo paths like "src/content/utils.mathUtils.js"
+      - Every local import path must exactly match a file listed in architecture.files
   allow_delegation: false
   verbose: true
 
@@ -112,10 +128,17 @@ home_screen_builder:
         - For local project files, import ONLY with relative paths beginning with ./ or ../
         - NEVER use absolute local imports like "src/..." or "/src/..."
         - Ensure each local relative import resolves to a file that exists in architecture.files
+        - Use correct relative path segmenting, never dot-joined pseudo paths (e.g. "utils.mathUtils")
+        - Include .js extension when importing local utils/shared files to avoid Metro resolution issues
          - FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation
       10) Do NOT call track_dependency. Architecture controls dependencies.
       11) If async-storage is allowed, isolate persistence in src/utils/storage.js
       12) MUST NOT edit App.js or index.js
+      12.1) RUNTIME SAFETY:
+        - Any add/create handler must generate a unique id string (Date.now().toString())
+        - Lists must use key={item.id} or keyExtractor with item.id
+        - Block empty/whitespace input with inline validation feedback
+        - Always initialize list state as [] and guard against undefined
       13) Tool reliability:
          - One file_writer call per response
          - One file per tool call
@@ -158,10 +181,16 @@ settings_screen_builder:
         - For local project files, import ONLY with relative paths beginning with ./ or ../
         - NEVER use absolute local imports like "src/..." or "/src/..."
         - Ensure each local relative import resolves to an existing file before writing
+        - Use correct relative path segmenting, never dot-joined pseudo paths (e.g. "utils.mathUtils")
+        - Include .js extension when importing local utils/shared files to avoid Metro resolution issues
          - FORBIDDEN: expo/storage, expo/filesystem, expo-sqlite, react-navigation
       8) Do NOT call track_dependency. Architecture controls dependencies.
       9) If async-storage is allowed, keep storage usage inside src/utils/storage.js
       10) MUST NOT edit App.js or index.js
+      10.1) RUNTIME SAFETY:
+        - If Settings adds or edits list items, enforce id generation and non-empty validation
+        - Any list rendering must use item.id as stable key
+        - Always initialize list state as [] and guard against undefined
       11) Tool reliability:
          - One file_writer call per response
          - One file per tool call
@@ -194,5 +223,6 @@ react_native_debugger:
     2. Path Correction: Fixing relative imports (e.g., changing '../styles' to './styles' if files are in the same folder).
     3. List Safety: Adding unique 'id' properties to objects used in FlatList data to prevent 'undefined.toString()' crashes.
     4. Missing Exports: Ensuring every component file actually has an 'export default' statement.
+    5. Unsafe handlers: Preventing onPress/onSubmit from calling undefined functions or mutating undefined lists.
   allow_delegation: false
   verbose: true

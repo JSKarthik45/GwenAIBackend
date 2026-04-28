@@ -12,6 +12,7 @@ plan_requirements:
     - Avoid feature bloat by keeping only high-value features that materially improve user success
     - For each feature, define implementation details so coding can be done correctly on first pass
     - Feature planning must include required user inputs, validation rules, state transitions, and expected behavior
+    - CRITICAL: Any list-based feature must specify a stable id field, non-empty validation, and default [] state
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
     - Prioritize strong UI/UX quality: clear hierarchy, balanced spacing, readable typography, and intuitive interactions
@@ -33,6 +34,10 @@ plan_requirements:
         implementation_notes: (content/shared/utils placement)
         acceptance_criteria: (testable pass conditions)
     Must include feature priority order (P1/P2/P3), user value rationale, and acceptance criteria for each feature.
+    For any list-based feature, acceptance criteria must include:
+      - add/create never crashes on empty input
+      - new items have unique string id
+      - list render uses item.id for key
     Must respect that navigation/header/safe area are prebuilt in template and not regenerated.
   agent: planner
 
@@ -89,6 +94,8 @@ design_architecture:
       - Architecture must ensure no page references missing exports, handlers, or helpers
       - All local file imports MUST be relative (./ or ../), never absolute aliases like src/...
       - Every local import path must resolve to an existing file in architecture.files
+      - Local import paths must use correct path segments (no dot-joined pseudo paths like utils.mathUtils)
+      - Local imports should include .js extensions for utils/shared modules to avoid Metro resolution errors
       - shared_state_contract must include all cross-screen variables and ownership semantics
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
@@ -96,6 +103,7 @@ design_architecture:
       - Prefer shared modules for reusable feature logic to reduce breakage across pages
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
+      - For any list-based feature, architecture must define item shape including id: string, and handlers for add/remove
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
       - 6-14 files total
@@ -131,11 +139,14 @@ implement_home_screen:
       ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
+    - Local import paths must use correct path segments (no dot-joined pseudo paths like utils.mathUtils)
+    - Local imports should include .js extensions for utils/shared modules to avoid Metro resolution errors
     - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
     - Proper styling (StyleSheet), event handlers, and high-quality UX polish in content blocks
     - Ensure content layout looks refined on both common phone sizes and larger devices
     - Add robust guardrails in UI behavior: empty states, input validation feedback, and failure-safe interactions where needed
+    - For list-based features: ensure add/create generates id string and list uses item.id key
     - Keep interactions snappy and predictable; avoid ambiguous controls
     - MUST preserve template shell/navigation files unchanged:
       * App.js
@@ -196,9 +207,12 @@ implement_settings_screen:
     - Keep shared_state_contract keys, defaults, and update semantics stable unless explicitly allowed
     - Write complete, production-quality code without TODOs/placeholders
     - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
+    - For list-based features: ensure add/create generates id string and list uses item.id key
     - Use ONLY imports declared in allowed_imports for each file
     - Local file imports MUST be relative (./ or ../), never alias imports like src/...
     - Ensure each local import resolves to an existing generated file
+    - Local import paths must use correct path segments (no dot-joined pseudo paths like utils.mathUtils)
+    - Local imports should include .js extensions for utils/shared modules to avoid Metro resolution errors
     - Use file_reader to verify current disk state; do not rely on remembered prior task output text
     - Preserve App.js and index.js unchanged
     Tool usage:
