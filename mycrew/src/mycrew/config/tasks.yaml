@@ -13,8 +13,6 @@ plan_requirements:
     - For each feature, define implementation details so coding can be done correctly on first pass
     - Feature planning must include required user inputs, validation rules, state transitions, and expected behavior
     - CRITICAL: Any list-based feature must specify a stable id field, non-empty validation, and default [] state
-    - SCOPE LOCK: Plan only features explicitly requested in the prompt
-    - PERSISTENCE RULE: Only plan persistence if explicitly requested in the prompt
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
     - Prioritize strong UI/UX quality: clear hierarchy, balanced spacing, readable typography, and intuitive interactions
@@ -107,14 +105,8 @@ design_architecture:
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
       - For any list-based feature, architecture must define item shape including id: string, and handlers for add/remove
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
-      - SCOPE LOCK: Architecture must implement only features in the prompt
-      - PERSISTENCE RULE: external_dependencies MUST be empty unless prompt requires persistence
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
       - 6-14 files total
-    - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
-    - FORBIDDEN: Picker from react-native (deprecated, not in Expo Go)
-    - If AsyncStorage is used, it MUST be default import and ONLY inside src/utils/storage.js
-    - FORBIDDEN: web-only JSX elements (button, div, span, input, form)
   expected_output: >
     Complete content-layer blueprint with 6-14 files focused on Home/Settings content,
     template shell preserved, robust feature mapping, and no invalid dependencies.
@@ -149,10 +141,6 @@ implement_home_screen:
     - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
     - Local import paths must use correct path segments (no dot-joined pseudo paths like utils.mathUtils)
     - Local imports should include .js extensions for utils/shared modules to avoid Metro resolution errors
-    - Every import path must map to a file explicitly listed in architecture.files
-    - No TODOs, placeholders, or "implement later" notes in file specs
-    - Every local import must point to a file that exists; create missing shared/utils files as needed
-    - No TODOs or placeholder logic; all handlers must be functional
     - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
     - Proper styling (StyleSheet), event handlers, and high-quality UX polish in content blocks
@@ -169,8 +157,6 @@ implement_home_screen:
     1.0) NEVER call file_writer more than once in a single response
     1.0.1) If 5 files remain, use 5 separate interaction turns
     1.1) Emit exactly one file_writer call per assistant response
-      - FORBIDDEN: Picker from react-native (deprecated)
-      - If AsyncStorage is used, it MUST be default import and ONLY inside src/utils/storage.js
     1.2) After each write, wait for tool completion before the next file_writer call
     1.3) Never batch multiple file_writer calls in one response or payload
     1.4) Never send multi-file arrays/objects to file_writer
@@ -227,20 +213,8 @@ implement_settings_screen:
     - Ensure each local import resolves to an existing generated file
     - Local import paths must use correct path segments (no dot-joined pseudo paths like utils.mathUtils)
     - Local imports should include .js extensions for utils/shared modules to avoid Metro resolution errors
-    - Every local import must point to a file that exists; create missing shared/utils files as needed
-    - No TODOs or placeholder logic; all handlers must be functional
     - Use file_reader to verify current disk state; do not rely on remembered prior task output text
     - Preserve App.js and index.js unchanged
-    - FORBIDDEN: Picker from react-native (deprecated)
-    - If AsyncStorage is used, it MUST be default import and ONLY inside src/utils/storage.js
-    - Every JSX component used must be imported from react-native or local modules
-    - FORBIDDEN: web-only JSX elements (button, div, span, input, form)
-    - SCOPE LOCK: Do not add features beyond architecture or prompt
-    - PERSISTENCE RULE: Do not add storage unless architecture explicitly includes it
-    - SCOPE LOCK: Do not add features beyond architecture or prompt
-    - PERSISTENCE RULE: Do not add storage unless architecture explicitly includes it
-    - Every JSX component used must be imported from react-native or local modules
-    - FORBIDDEN: web-only JSX elements (button, div, span, input, form)
     Tool usage:
     1) Use file_writer for one file at a time
     1.0) NEVER call file_writer more than once in a single response
@@ -296,22 +270,18 @@ debug_runtime_logic:
    4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
    5. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
    6. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
-   7. MISSING MODULES: If a local import resolves to a missing file, you MUST create the missing file with a safe, minimal implementation.
-   8. TODO PLACEHOLDERS: If any file contains TODOs or placeholder logic, replace with working logic or remove the UI action.
-  9. MISSING RN IMPORTS: If a JSX component is used but not imported, add the correct react-native import.
-  10. WEB-ONLY ELEMENTS: Replace any <button>/<div>/<span>/<input>/<form> with React Native components.
-  11. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
-  12. NO HALLUCINATED FUNCTIONS RULE: Do not use placeholder functions like loadTodoItemsFromStorage().
+   7. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
+   8. NO HALLUCINATED FUNCTIONS RULE: Do not use placeholder functions like loadTodoItemsFromStorage().
      If a function is needed, it must be explicitly defined in the code you write.
-  13. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
+   9. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
      Your first response MUST be a file_reader tool call to inspect the codebase.
-  14. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
+   10. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
       you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
-  15. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
+   11. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
       If multiple files are needed, handle exactly one file per response and wait for success before the next file.
-  16. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
+   12. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
       Never emit a shorthand path, bracketed filename, or partial tool argument.
-  17. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
+   13. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
       Any text-only response without tool calls is a FAILURE.
   expected_output: >-
     A crash-free codebase. All imports are resolved, and all list items have IDs.
