@@ -1,354 +1,78 @@
 plan_requirements:
   description: >
-    From the user's prompt ({content_prompt}), extract features for CONTENT inside a prebuilt MULTI-SCREEN Expo shell.
+    From the user prompt ({content_prompt}), extract 3-5 features for a SINGLE-PAGE Expo React Native app.
     Constraints:
-    - React Native + Expo SDK 54
-    - Exactly 2 screens: Home and Settings
-    - Navigation shell already exists in template (SafeAreaView + header + bottom navbar)
-    - Focus only on what appears inside Home and Settings content areas
-    - Prioritize the most important MVP outcomes first: must-have value before nice-to-have extras
-    - Rank features by user impact and implementation feasibility for an MVP
-    - Include MORE features than minimal mode: target 6-9 concrete features while preserving MVP focus
-    - Avoid feature bloat by keeping only high-value features that materially improve user success
-    - For each feature, define implementation details so coding can be done correctly on first pass
-    - Feature planning must include required user inputs, validation rules, state transitions, and expected behavior
-    - NO backend/auth/external APIs
-    - Keep implementation concise (not oversized files)
-    - Prioritize clean, professional, minimalist UI/UX quality: subtle neutral colors, consistent 16px padding, clear hierarchy, readable typography, and intuitive interactive elements.
-    - Ensure every interactive element (button, pressable) is explicitly planned with working state handlers.
-    - CRITICAL - COMPLETE CRUD FLOW: Every planned feature must explicitly detail its full interactive lifecycle. If planning a list, you MUST mandate UI elements for Creating, Reading, Updating, and Deleting items. Do not allow 'read-only' dummy lists.
-    - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is explicitly required by the user)
-    - Do NOT use third-party libraries like moment/date-fns/dayjs or any other external packages
-    - Do NOT include persistence by default; only add persistence if the prompt explicitly asks to keep data across launches
-    - Do NOT use Picker (react-native Picker is deprecated and requires an external package)
-    - Use built-in controls only (e.g., Pressable, Switch, Button) for settings choices
-    - Content must be specific to the current prompt; do NOT reuse or reference prior app themes
-    - Do NOT leave template placeholder text in Home/Settings content
-    - Do NOT leave empty useEffect blocks or stub handlers; implement real logic
-    - Do NOT render Text as a button; use Pressable or Button for interactions
-  expected_output: >
-    Detailed MVP feature spec with 6-9 features and clear Home/Settings content behavior.
-    REQUIRED OUTPUT FORMAT:
+    - React Native + Expo SDK 54, JSX only
+    - ONE screen only (src/Content.js). NO navigation, NO tabs, NO routing.
+    - App.js is a prebuilt shell with SafeAreaView + header. It imports and renders src/Content.js.
+    - Focus on what Content.js should display and do
+    - Target 3-5 concrete, achievable features
+    - NO backend, NO auth, NO external APIs
+    - Use ONLY react and react-native built-ins
+    - Do NOT add persistence unless the prompt explicitly asks for it
+    - For data features, plan full CRUD (Create, Read, Update, Delete)
+    REQUIRED OUTPUT:
     feature_plan:
       - feature_name:
-        priority: (P1/P2/P3)
-        user_value:
-        target_screen: (Home/Settings/Both)
-        required_inputs: (fields, types, defaults)
-        processing_logic: (how inputs are transformed and used)
-        validation_rules: (required, ranges, formats, edge checks)
-        interaction_flow: (tap/input/result sequence)
-        ui_states: (initial/empty/loading/success/error)
-        persistence_needs: (none or storage keys/shape)
-        implementation_notes: (content/shared/utils placement)
-        acceptance_criteria: (testable pass conditions)
-    Must include feature priority order (P1/P2/P3), user value rationale, and acceptance criteria for each feature.
-    Must respect that navigation/header/safe area are prebuilt in template and not regenerated.
+        priority: P1
+        description: what the feature does
+        ui_elements: buttons, inputs, lists needed
+        state: what useState hooks are needed
+        handlers: what functions are needed
+  expected_output: >
+    A feature plan with 3-5 features for a single-page app.
+    Each feature has clear UI elements, state, and handlers defined.
   agent: planner
 
-design_architecture:
+build_app:
   description: >
-    Design a content-layer Expo architecture (6-14 files, 25-110 lines per file) for a prebuilt template shell.
-    Hard constraints:
-    - Template provides root App.js, SafeAreaView, header, and bottom navbar
-    - DO NOT redesign or regenerate navigation shell files
-    - Content entry files must be:
-      * src/HomeContent.js
-      * src/SettingsContent.js
-    - Supporting files MUST also be placed directly in src/ (no subfolders!):
-      * e.g., src/Button.js, src/storage.js
-    - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
-    - Design for a clean, professional UX: use minimalist styling, neutral backgrounds, subtle borders, and consistent spacing. Avoid chaotic colors or glassmorphism.
-    - Architecture must guarantee reliable behavior for all P1 features from the plan
-    - FATAL ERROR PREVENTION (MODULE RESOLUTION): You MUST explicitly map out the exact import statements that each file will use. You MUST guarantee that all file paths (relative only) and export names (named vs default) exactly match between files.
-    - Define clear state ownership, strict data schemas (e.g., objects with specific keys like 'id', 'title'), and explicit mutation functions for every required CRUD operation (add, edit, delete).
-    - Prefer maintainable, testable, and readable structure over clever complexity
-    - CRITICAL: ONLY use react and react-native modules
-    - Do NOT include persistence unless explicitly required by the user prompt
-    - Do NOT use Picker; build settings controls with Pressable/Switch/Button only
-    - Do NOT use third-party libraries like moment/date-fns/dayjs or any other external packages
-    - Architecture must match the current prompt; no leftover features from previous prompts
-    - Do not include files that are not used by HomeContent or SettingsContent
-    REQUIRED OUTPUT FORMAT:
-    architecture_summary: <description of Home/Settings content behavior inside template shell>
-    shared_state_contract:
-      owner: (Home/Settings/Both)
-      variables:
-        - name:
-          type:
-          default:
-          updated_by: (Home/Settings/Both)
-          consumed_by: (Home/Settings/Both)
-          persistence_key: (none or storage key)
-          invariants: (validation and allowed transitions)
-      integration_rules:
-        - rule:
-          rationale:
-    external_dependencies: (EMPTY unless persistent storage is explicitly required, then ONLY @react-native-async-storage/async-storage)
-    files:
-      - filename: (MUST be PascalCase, e.g. Button.js NOT button.js. All files will be placed in src/ subdirectory)
-        purpose: (clear description)
-        size_estimate: (20-110 lines per file)
-        exports:
-        state/hooks: (which useState/hooks this file uses)
-        handlers:
-        allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
-        local_import_paths: (ONLY relative paths like ./foo; NEVER use ../ or src/...; NEVER include .js extension)
-    VALIDATION:
-      - Must include exactly 2 content files: src/HomeContent.js and src/SettingsContent.js
-      - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
-      - Must not define navigation state or screen-switch handlers (template handles navigation)
-      - Agent may add shared files directly in src/ when functionality is reused across pages
-      - Shared modules must be imported consistently by both pages when applicable
-      - Architecture must ensure no page references missing exports, handlers, or helpers
-      - All local file imports MUST use same-folder relative paths (e.g. './Button'), because all files are in src/.
-      - CRITICAL: YOU MUST NOT include 'src/' or the '.js' extension in the import statement. (e.g. if the file is Button.js, the import must be './Button', NOT 'src/Button' and NOT './Button.js')
-      - Every local import path must resolve to an existing file in architecture.files
-      - FATAL ERROR PREVENTION: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
-      - shared_state_contract must include all cross-screen variables and ownership semantics
-      - Every planned P1 feature must map to concrete handlers/state in architecture
-      - Architecture must include empty/loading/error/validation UI behavior where relevant
-      - Architecture must map all planned features to files (Home/Settings/shared/utils) without orphaned feature logic
-      - Prefer shared modules for reusable feature logic to reduce breakage across pages
-      - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
-      - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
-      - If persistence is NOT explicitly required: do not include src/storage.js at all
-      - Never create unused shared/utils files; every generated file must be imported by HomeContent or SettingsContent
-      - Do not use Picker from react-native; no external picker packages
-      - No placeholder comments or TODOs in generated code
-      - No third-party libraries like moment/date-fns/dayjs in any file
-      - Home/Settings content must reflect the current prompt domain only
-      - No template placeholder text in Home/Settings content
-      - No empty useEffect blocks or stub handlers in Home/Settings
-      - No Text-as-button interactions; use Pressable/Button only
-      - No unused files; every file in architecture.files must be imported by HomeContent or SettingsContent
-      - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
-      - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
-      - 6-14 files total
+    Build the entire single-page app based on the feature plan.
+    You MUST write src/Content.js as the main (and usually only) file.
+    If you need helper utilities, put them in src/ as separate files (e.g. src/helpers.js).
+    Target 1-3 total files. Keep it simple.
+    Hard rules:
+    - JSX only (no TypeScript)
+    - All files go directly in src/ (NO subfolders)
+    - ALL local imports MUST use ./ relative paths (e.g. ./helpers)
+    - NEVER use src/... or ../ in imports
+    - NEVER include .js extension in imports
+    - Use ONLY react and react-native modules
+    - MUST NOT edit App.js or index.js
+    - NO mock data. Wire all UI to real React state.
+    - Every button must have a working onPress handler
+    - Never place raw text outside a Text component
+    - Use numeric style values (10, not '10px')
+    - Clean, professional, minimalist UI
+    Tool usage:
+    1) One file_writer call per response
+    2) Wait for SUCCESS before writing next file
+    3) First response MUST be a file_writer call
+    4) No narrative text, no markdown, no code fences
+    5) Keep files under 120 lines
+    Required writes: src/Content.js (plus any helper files it imports)
+    Final response after all files written: DONE
   expected_output: >
-    Complete content-layer blueprint with 6-14 files focused on Home/Settings content,
-    template shell preserved, robust feature mapping, and no invalid dependencies.
-    Blueprint must fully cover all planned features with concrete implementation paths,
-    including an explicit shared_state_contract for variables used across Home and Settings.
-  agent: architect
+    All app files written. src/Content.js is the main screen.
+    All imports are valid relative paths. All features work. DONE.
+  agent: builder
   context: [plan_requirements]
-
-implement_home_screen:
-  description: >
-    Implement Home first using the architecture blueprint and shared_state_contract.
-    Home phase scope:
-    - src/HomeContent.js
-    - any required shared/utils files (all placed directly in src/) needed by Home and later Settings
-    - DO NOT write src/SettingsContent.js in this phase
-    Hard rules:
-    - Create ONLY files listed in architecture.files and in specified quantities
-    - JSX only (no TypeScript/TSX)
-    - Write only files directly under src/ (NO subfolders)
-    - Write complete, production-quality code:
-      * Content files: 25-110 lines each
-      * Shared/utils files: 20-100 lines each
-    - NO skeleton code or TODOs. Everything must work as written.
-    - Implement all Home-targeted planned features completely end-to-end (UI + state + handlers)
-    - Establish shared_state_contract variables exactly as designed by architect
-    - If logic/UI is reused across pages, extract shared modules with stable exports for Settings phase
-    - CRITICAL: For each file, use ONLY imports in allowed_imports.
-      Before writing each file, verify every import is whitelisted.
-      FORBIDDEN: expo/storage (does not exist), expo-sqlite, expo/filesystem, react-navigation
-      ALLOWED EXCEPTION: @react-native-async-storage/async-storage if in architecture.external_dependencies
-      RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
-    - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
-    - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
-    - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
-    - Implement professional, minimalist styling (StyleSheet) (e.g., neutral backgrounds, consistent 16px padding, subtle borders). Avoid chaotic colors or excessive shadows.
-    - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers that mutate real state.
-    - FORBIDDEN: Do not use static/hardcoded mock data. You must wire all lists and inputs to actual React state. All "Edit" or "Delete" UI elements must trigger real functions.
-    - Ensure content layout looks refined on both common phone sizes and larger devices
-    - FATAL ERROR PREVENTION (MODULE RESOLUTION): NEVER use absolute local paths. If the architecture says a file is "Button.js", YOUR IMPORT MUST BE "./Button". YOU MUST NOT include "src/" or the ".js" extension in the import string. ALWAYS strictly enforce PascalCase (e.g. ./Button, NOT ./button). NEVER use ../.
-    - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    - CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
-    - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
-    - Add robust guardrails in UI behavior: empty states, input validation feedback, and failure-safe interactions where needed
-    - Keep interactions snappy and predictable; avoid ambiguous controls
-    - MUST preserve template shell/navigation files unchanged:
-      * App.js
-      * index.js
-    - Do not add features beyond architecture
-    Tool usage:
-    1) Use file_writer for one file at a time
-    1.0) NEVER call file_writer more than once in a single response
-    1.0.1) If 5 files remain, use 5 separate interaction turns
-    1.1) Emit exactly one file_writer call per assistant response
-    1.2) After each write, wait for tool completion before the next file_writer call
-    1.3) Never batch multiple file_writer calls in one response or payload
-    1.4) Never send multi-file arrays/objects to file_writer
-    1.5) Process architecture.files as a strict loop:
-      - Step A: Validate file imports against allowed_imports
-      - Step B: Write that single file with file_writer
-      - Step C: Wait for SUCCESS confirmation from tool output
-      - Step D: Move to next file only after SUCCESS
-    2) Write only to "src/*" paths (no subfolders allowed)
-    3) Use file_reader only if needed
-    4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
-    5) Do not output code in chat; only use file_writer
-    6) CRITICAL: Validate every import against allowed_imports before writing code
-    6.1) Validate every local import path is relative (usually just ./) and file-resolvable
-    7) If persistent storage used, create src/storage.js with all AsyncStorage logic
-    7.1) If persistence is not explicitly required, do NOT create storage utils or import them
-    7.2) Do not create unused shared/utils files; every file must be imported by HomeContent or SettingsContent
-    7.3) Ensure every local import has a matching export (named vs default) in the target file
-    7.4) Do not import local modules unless you will write them before returning DONE
-    7.5) Do NOT use Picker; use Pressable/Switch/Button-based controls
-    7.6) Do NOT import third-party libraries like moment/date-fns/dayjs
-    7.7) Home/Settings content MUST be aligned to the current prompt only
-    7.8) Remove any template placeholder copy from Home/Settings content
-    7.9) Do not leave empty useEffect blocks or stub handlers
-    7.10) Do not use Text as a button; use Pressable or Button
-    8) Keep each file payload compact (<~90 lines) to avoid tool-call JSON failures
-    9) If a feature needs too much code, split logic into additional shared/helper files listed in architecture
-    10) NEVER output markdown/json fences before tool calls; send direct tool calls only
-    11) Task is invalid if assistant returns narrative text without required file_writer calls.
-    12) Required successful writes for completion:
-      - src/HomeContent.js
-      - plus any files imported by HomeContent.js
-    13) CRITICAL FAILURE RULE: Do not return DONE until every Home-phase file in architecture.files is written or confirmed unnecessary by zero imports.
-    14) NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
-        If multiple files are needed, write exactly one file per response and wait for success before the next file.
-    15) COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
-        Never emit a shorthand path, bracketed filename, or partial tool argument.
-    Final response after all tool calls: DONE
-  expected_output: >
-    Implemented Home phase files (Home content plus shared foundations),
-    shared_state_contract established for cross-screen reuse,
-    template shell preserved unchanged, all imports verified,
-    external_dependencies honored (empty or just async-storage),
-    no invalid dependencies, polished Home UX, final response DONE.
-  agent: home_screen_builder
-  context: [design_architecture]
-
-implement_settings_screen:
-  description: >
-    Implement Settings second, after Home phase is complete.
-    Settings phase scope:
-    - MUST implement src/SettingsContent.js
-    - MAY update other shared/utils files only if needed for shared_state_contract compliance
-    - MUST preserve Home behavior and shared variable compatibility
-    Hard rules:
-    - Create/update ONLY files listed in architecture.files and in specified quantities
-    - JSX only (no TypeScript/TSX)
-    - Keep shared_state_contract keys, defaults, and update semantics stable unless explicitly allowed
-    - Write complete, production-quality code without TODOs/placeholders
-    - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
-    - Implement professional, minimalist styling (StyleSheet) (e.g., neutral backgrounds, consistent 16px padding, subtle borders). Avoid chaotic colors or excessive shadows.
-    - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers that mutate real state.
-    - FORBIDDEN: Do not use static/hardcoded mock data. You must wire all lists and inputs to actual React state. All "Edit" or "Delete" UI elements must trigger real functions.
-    - Use ONLY imports declared in allowed_imports for each file
-    - FATAL ERROR PREVENTION (MODULE RESOLUTION): NEVER use absolute local paths. If the architecture says a file is "Button.js", YOUR IMPORT MUST BE "./Button". YOU MUST NOT include "src/" or the ".js" extension in the import string. ALWAYS strictly enforce PascalCase (e.g. ./Button, NOT ./button). NEVER use ../.
-    - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    - CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
-    - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
-    - Local file imports MUST be relative (./ or ../), never alias imports like src/...
-    - Ensure each local import resolves to an existing generated file
-    - Use file_reader to verify current disk state; do not rely on remembered prior task output text
-    - Preserve App.js and index.js unchanged
-    - If persistence is not explicitly required, do NOT create storage utils or import them
-    - Do not create unused shared/utils files; every file must be imported by HomeContent or SettingsContent
-    - Ensure every local import has a matching export (named vs default) in the target file
-    - Do not import local modules unless you will write them before returning DONE
-    - Do NOT use Picker; use Pressable/Switch/Button-based controls
-    - Do NOT import third-party libraries like moment/date-fns/dayjs
-    - Home/Settings content MUST be aligned to the current prompt only
-    - Remove any template placeholder copy from Home/Settings content
-    - Do not leave empty useEffect blocks or stub handlers
-    - Do not use Text as a button; use Pressable or Button
-    Tool usage:
-    1) Use file_writer for one file at a time
-    1.0) NEVER call file_writer more than once in a single response
-    1.1) Emit exactly one file_writer call per assistant response
-    1.2) Wait for each write success before next file
-    1.3) Never batch multiple writes
-    1.4) Never send multi-file arrays/objects to file_writer
-    1.5) Task is invalid if assistant returns narrative text without required file_writer calls
-    1.6) First assistant response MUST be a file_writer tool call (never narrative text)
-    1.7) If tool call fails, retry with smaller file payload; do not switch to prose
-    1.8) NEVER emit shorthand tool payloads such as bracketed paths like [src/SettingsContent.js]
-         and NEVER emit partial arguments; always provide full valid JSON tool arguments.
-    1.9) Required successful writes for completion:
-      - src/SettingsContent.js
-    1.10) CRITICAL FAILURE RULE: Do not return DONE until every Settings-phase file in architecture.files is written or confirmed unnecessary by zero imports.
-    1.11) Before returning DONE, verify that every local import used by src/SettingsContent.js resolves to an existing file under src/; if not, create missing modules first.
-    1.12) Also verify import/export compatibility for every SettingsContent local import: if importing a named symbol, that symbol must be exported by the target module; if importing default, target must export default.
-    1.13) NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
-      If multiple files are needed, write exactly one file per response and wait for success before the next file.
-    1.14) COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
-       Never emit a shorthand path, bracketed filename, or partial tool argument.
-    1.15) Process architecture.files as a strict loop:
-      - Step A: Validate file imports against allowed_imports
-      - Step B: Write that single file with file_writer
-      - Step C: Wait for SUCCESS confirmation from tool output
-      - Step D: Move to next file only after SUCCESS
-    1.16) Keep each file payload compact (<~90 lines) to reduce malformed tool-call risk.
-    1.17) NEVER output markdown/json fences before tool calls; send direct tool calls only.
-    1.18) No placeholders or TODOs. Complete working code only.
-    1.19) Required completion safety:
-      - MUST write src/SettingsContent.js
-      - MUST write any shared/utils dependencies imported by SettingsContent.js
-      - If imports are missing after write, create missing files before DONE
-    Final response after all tool calls: DONE
-  expected_output: >
-    Implemented Settings phase files with shared contract compatibility,
-    Home behavior preserved, template shell unchanged, imports verified,
-    polished Settings UX, and final response DONE.
-  agent: settings_screen_builder
-  context: [design_architecture]
 
 debug_runtime_logic:
   description: >-
-   0. CONTEXT ISOLATION RULE: Do not look at previous task outputs. Use only file_reader results from current disk state.
-     Audit files as they exist now, not how they were built.
-   1. Use 'file_reader' to scan files one at a time only. Do not batch reads.
-   2. You are strictly forbidden from outputting more than ONE tool call per response.
-     You must never use a JSON array for tool calls.
-     If you need to fix three files, fix the first one, wait for SUCCESS, and only then proceed to the next in a separate turn.
-   3. Start by calling file_reader for src/HomeContent.js only.
-     Read it, analyze it, and if it needs a fix, call file_writer.
-     Only after HomeContent.js is fully verified and fixed may you move to src/SettingsContent.js.
-   4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style. This prevents unresolved imports.
-   4.0 ZERO MODULE RESOLUTION ERRORS GUARANTEE:
-      - You MUST read EVERY SINGLE file imported locally by HomeContent.js and SettingsContent.js using file_reader.
-      - Verify the file ACTUALLY exists. If not, create it.
-      - Verify the export type EXACTLY matches. If the file has 'export default Button', the import MUST be 'import Button from ...'. If it has 'export const Button', the import MUST be 'import { Button } from ...'.
-      - Ensure NO absolute local imports (e.g., 'src/Button'). Rewrite them to relative paths (e.g., './Button').
-   4.0.1 CHECK BUTTONS & CRASHES: Verify all buttons have valid onPress handlers. Add optional chaining (?.) to prevent app crashes when accessing nested data. Ensure UI has adequate padding and doesn't look bad.
-   4.0.2 REACT NATIVE STRICTNESS: Scan for and fix any bare text outside of <Text> tags. Scan for and fix any invalid style values like '10px' to just 10.
-   4.0.3 JSX SYNTAX VERIFICATION: Thoroughly scan the file for unclosed JSX braces (e.g. `prop="value" />` instead of `prop="value" />`) and unclosed tags. Fix any syntax errors immediately.
-   4.1 If HomeContent or SettingsContent imports a utils/shared file, read that file and confirm the imported names exist.
-   4.2 If a file imports @react-native-async-storage/async-storage, verify it is required by the prompt; if not, remove storage usage.
-   4.3 Scan for syntax errors (e.g., stray semicolons after JSX blocks) and fix them in-place.
-   4.4 Replace any Picker usage with Pressable/Switch/Button controls.
-   4.5 Remove placeholder comments or TODOs in generated code.
-   4.6 Remove any third-party library imports (moment/date-fns/dayjs) and refactor to plain JS.
-    4.7 If Home/Settings content does not match the current prompt domain, replace it with prompt-specific content.
-    4.8 Remove any template placeholder copy from Home/Settings content.
-    4.9 Replace Text-as-button interactions with Pressable or Button.
-    4.10 Replace empty useEffect blocks or stub handlers with real logic or remove them.
-   5. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
-   6. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
-   7. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
-   8. NO HALLUCINATED FUNCTIONS RULE: Do not use placeholder functions like loadTodoItemsFromStorage().
-     If a function is needed, it must be explicitly defined in the code you write.
-   9. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
-     Your first response MUST be a file_reader tool call to inspect the codebase.
-   10. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
-     you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
-   11. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
-     If multiple files are needed, handle exactly one file per response and wait for success before the next file.
-   12. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
-     Never emit a shorthand path, bracketed filename, or partial tool argument.
-   13. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
-     Any text-only response without tool calls is a FAILURE.
+   0. CONTEXT ISOLATION: Use only file_reader results. Do not rely on previous task output.
+   1. Use file_reader to read src/Content.js first.
+   2. ONE tool call per response. Never batch.
+   3. Check EVERY local import: verify the file exists, verify export type matches import type.
+   4. Rewrite any imports using '../' or 'src/' to use exactly './' (e.g. 'src/Button' becomes './Button').
+   5. If an imported file does not exist, CREATE it with file_writer.
+   6. Verify all buttons have working onPress handlers.
+   7. Verify no raw text outside Text tags.
+   8. Verify no invalid styles like '10px'.
+   9. Fix unclosed JSX tags and braces.
+   10. Add optional chaining (?.) where data access could crash.
+   11. Use file_writer to fix any issues found.
+   12. Return DONE only after verifying and fixing all files.
   expected_output: >-
-    A crash-free codebase. All imports are resolved, and all list items have IDs.
-    Return 'DONE' only after all identified bugs are patched and all required verification/repair tool calls have been executed.
+    A crash-free codebase with all imports resolved. DONE.
   agent: react_native_debugger
   context: []
-
