@@ -162,7 +162,7 @@ implement_home_screen:
     - Ensure content layout looks refined on both common phone sizes and larger devices
     - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    - CRITICAL: Ensure perfect JSX syntax. All braces {} and tags < /> MUST be properly closed (e.g. <Component prop={value} />).
+    - CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
     - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
     - Add robust guardrails in UI behavior: empty states, input validation feedback, and failure-safe interactions where needed
     - Keep interactions snappy and predictable; avoid ambiguous controls
@@ -240,7 +240,7 @@ implement_settings_screen:
     - Use ONLY imports declared in allowed_imports for each file
     - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    - CRITICAL: Ensure perfect JSX syntax. All braces {} and tags < /> MUST be properly closed (e.g. <Component prop={value} />).
+    - CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
     - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
     - Local file imports MUST be relative (./ or ../), never alias imports like src/...
     - Ensure each local import resolves to an existing generated file
@@ -316,7 +316,7 @@ debug_runtime_logic:
       - Ensure NO absolute local imports (e.g., 'src/Button'). Rewrite them to relative paths (e.g., './Button').
    4.0.1 CHECK BUTTONS & CRASHES: Verify all buttons have valid onPress handlers. Add optional chaining (?.) to prevent app crashes when accessing nested data. Ensure UI has adequate padding and doesn't look bad.
    4.0.2 REACT NATIVE STRICTNESS: Scan for and fix any bare text outside of <Text> tags. Scan for and fix any invalid style values like '10px' to just 10.
-   4.0.3 JSX SYNTAX VERIFICATION: Thoroughly scan the file for unclosed JSX braces (e.g. `prop={value />` instead of `prop={value} />`) and unclosed tags. Fix any syntax errors immediately.
+   4.0.3 JSX SYNTAX VERIFICATION: Thoroughly scan the file for unclosed JSX braces (e.g. `prop="value" />` instead of `prop="value" />`) and unclosed tags. Fix any syntax errors immediately.
    4.1 If HomeContent or SettingsContent imports a utils/shared file, read that file and confirm the imported names exist.
    4.2 If a file imports @react-native-async-storage/async-storage, verify it is required by the prompt; if not, remove storage usage.
    4.3 Scan for syntax errors (e.g., stray semicolons after JSX blocks) and fix them in-place.
