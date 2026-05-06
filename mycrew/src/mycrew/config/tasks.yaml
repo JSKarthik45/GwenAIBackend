@@ -61,7 +61,7 @@ design_architecture:
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
     - Design for a stunning, premium UX: use modern styling, vibrant colors, shadows, border-radius, and glassmorphism where appropriate.
     - Architecture must guarantee reliable behavior for all P1 features from the plan
-    - CRITICAL: Prevent unresolved imports by guaranteeing that all file paths and export names exactly match.
+    - FATAL ERROR PREVENTION (MODULE RESOLUTION): You MUST explicitly map out the exact import statements that each file will use. You MUST guarantee that all file paths (relative only) and export names (named vs default) exactly match between files.
     - Define clear state ownership, data flow, and edge-case handling for each feature
     - Prefer maintainable, testable, and readable structure over clever complexity
     - CRITICAL: ONLY use react and react-native modules
@@ -104,7 +104,7 @@ design_architecture:
       - Architecture must ensure no page references missing exports, handlers, or helpers
       - All local file imports MUST be relative (./ or ../), never absolute aliases like src/...
       - Every local import path must resolve to an existing file in architecture.files
-      - CRITICAL: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
+      - FATAL ERROR PREVENTION: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
       - shared_state_contract must include all cross-screen variables and ownership semantics
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
@@ -162,7 +162,7 @@ implement_home_screen:
     - Implement premium styling (StyleSheet) with modern design aesthetics (vibrant colors, generous padding, rounded corners, shadows). Ensure the app does not look bad or basic.
     - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers.
     - Ensure content layout looks refined on both common phone sizes and larger devices
-    - CRITICAL: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
+    - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
     - Add robust guardrails in UI behavior: empty states, input validation feedback, and failure-safe interactions where needed
@@ -239,7 +239,7 @@ implement_settings_screen:
     - Implement premium styling (StyleSheet) with modern design aesthetics (vibrant colors, generous padding, rounded corners, shadows). Ensure the app does not look bad or basic.
     - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers.
     - Use ONLY imports declared in allowed_imports for each file
-    - CRITICAL: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
+    - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
     - Local file imports MUST be relative (./ or ../), never alias imports like src/...
@@ -309,8 +309,13 @@ debug_runtime_logic:
      Read it, analyze it, and if it needs a fix, call file_writer.
      Only after HomeContent.js is fully verified and fixed may you move to src/content/SettingsContent.js.
    4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style. This prevents unresolved imports.
-   4.0 CHECK BUTTONS & CRASHES: Verify all buttons have valid onPress handlers. Add optional chaining (?.) to prevent app crashes when accessing nested data. Ensure UI has adequate padding and doesn't look bad.
-   4.0.1 REACT NATIVE STRICTNESS: Scan for and fix any bare text outside of <Text> tags. Scan for and fix any invalid style values like '10px' to just 10.
+   4.0 ZERO MODULE RESOLUTION ERRORS GUARANTEE:
+      - You MUST read EVERY SINGLE file imported locally by HomeContent.js and SettingsContent.js using file_reader.
+      - Verify the file ACTUALLY exists. If not, create it.
+      - Verify the export type EXACTLY matches. If the file has 'export default Button', the import MUST be 'import Button from ...'. If it has 'export const Button', the import MUST be 'import { Button } from ...'.
+      - Ensure NO absolute local imports (e.g., 'src/shared/Button'). Rewrite them to relative paths (e.g., '../shared/Button').
+   4.0.1 CHECK BUTTONS & CRASHES: Verify all buttons have valid onPress handlers. Add optional chaining (?.) to prevent app crashes when accessing nested data. Ensure UI has adequate padding and doesn't look bad.
+   4.0.2 REACT NATIVE STRICTNESS: Scan for and fix any bare text outside of <Text> tags. Scan for and fix any invalid style values like '10px' to just 10.
    4.1 If HomeContent or SettingsContent imports a utils/shared file, read that file and confirm the imported names exist.
    4.2 If a file imports @react-native-async-storage/async-storage, verify it is required by the prompt; if not, remove storage usage.
    4.3 Scan for syntax errors (e.g., stray semicolons after JSX blocks) and fix them in-place.
