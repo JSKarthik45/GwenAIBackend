@@ -529,6 +529,66 @@ def _find_import_without_export_modules(base_output: Path) -> list[str]:
     return invalid_modules
 
 
+def fix_absolute_src_imports(base_output: Path) -> None:
+    """Post-process all generated JS files in src/ to rewrite absolute 'src/...' imports.
+
+    The AI agents sometimes emit imports like:
+        import Theme from 'src/Theme';
+        import Button from 'src/Button.js';
+
+    Metro (Expo bundler) cannot resolve these. This function deterministically
+    rewrites every such import to a safe relative form:
+        import Theme from './Theme';
+        import Button from './Button';
+
+    This runs AFTER the crew finishes, so it catches every file regardless of
+    which agent wrote it.
+    """
+    src_dir = base_output / "src"
+    if not src_dir.exists():
+        print("⚠ fix_absolute_src_imports: src/ directory not found, skipping.")
+        return
+
+    # Pattern: import X from 'src/Foo' or import X from "src/Foo.js"
+    # Captures: from 'src/Foo', from "src/Foo.js" etc.
+    absolute_src_pattern = re.compile(
+        r"(from\s+['\"])src/([^'\"]+)(['\"])"
+    )
+
+    fixed_count = 0
+
+    def _rewrite_match(m: re.Match) -> str:
+        quote_open = m.group(1)   # e.g. from '
+        module_name = m.group(2)  # e.g. Theme or Theme.js
+        quote_close = m.group(3)  # e.g. '
+        # Strip .js extension for clean Metro imports
+        clean = module_name.removesuffix(".js")
+        return f"{quote_open}./{clean}{quote_close}"
+
+    for js_file in src_dir.rglob("*.js"):
+        try:
+            original = js_file.read_text(encoding="utf-8")
+        except Exception as e:
+            print(f"⚠ Could not read {js_file.name}: {e}")
+            continue
+
+        patched = absolute_src_pattern.sub(_rewrite_match, original)
+
+        if patched != original:
+            try:
+                js_file.write_text(patched, encoding="utf-8")
+                fixed_count += 1
+                print(f"  Fixed absolute 'src/' imports in: {js_file.name}")
+            except Exception as e:
+                print(f"⚠ Could not write {js_file.name}: {e}")
+
+    if fixed_count:
+        print(f"✓ fix_absolute_src_imports: rewrote absolute imports in {fixed_count} file(s).")
+    else:
+        print("✓ fix_absolute_src_imports: no absolute 'src/' imports found.")
+
+
+
 def _ensure_non_template_content() -> None:
     """Guarantee Home/Settings content files exist with usable, resolvable implementation.
 
@@ -537,9 +597,20 @@ def _ensure_non_template_content() -> None:
     """
     from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT
 
-    home_file = TOOL_BASE_OUTPUT / "src" / "content" / "HomeContent.js"
-    settings_file = TOOL_BASE_OUTPUT / "src" / "content" / "SettingsContent.js"
-    storage_file = TOOL_BASE_OUTPUT / "src" / "utils" / "storage.js"
+    # Flat src/ structure (current architecture)
+    home_file = TOOL_BASE_OUTPUT / "src" / "HomeContent.js"
+    settings_file = TOOL_BASE_OUTPUT / "src" / "SettingsContent.js"
+
+    # Fallback: accept legacy nested paths if flat not found
+    if not home_file.exists():
+        home_file = TOOL_BASE_OUTPUT / "src" / "content" / "HomeContent.js"
+    if not settings_file.exists():
+        settings_file = TOOL_BASE_OUTPUT / "src" / "content" / "SettingsContent.js"
+
+    # Flat storage (current architecture) or legacy nested
+    storage_file = TOOL_BASE_OUTPUT / "src" / "storage.js"
+    if not storage_file.exists():
+        storage_file = TOOL_BASE_OUTPUT / "src" / "utils" / "storage.js"
 
     home_needs_fallback = not home_file.exists()
     settings_needs_fallback = not settings_file.exists()
@@ -550,11 +621,11 @@ def _ensure_non_template_content() -> None:
             home_needs_fallback = True
         home_missing_tree = _find_missing_dependency_edges(home_file)
         if home_missing_tree:
-            print(f"⚠ HomeContent dependency tree has missing imports: {home_missing_tree}")
+            print(f"WARNING HomeContent dependency tree has missing imports: {home_missing_tree}")
             home_needs_fallback = True
         home_invalid_contracts = _find_invalid_import_contracts(home_file)
         if home_invalid_contracts:
-            print(f"⚠ HomeContent import/export contract issues: {home_invalid_contracts}")
+            print(f"WARNING HomeContent import/export contract issues: {home_invalid_contracts}")
             home_needs_fallback = True
 
     if settings_file.exists():
@@ -563,14 +634,14 @@ def _ensure_non_template_content() -> None:
             settings_needs_fallback = True
         settings_missing_tree = _find_missing_dependency_edges(settings_file)
         if settings_missing_tree:
-            print(f"⚠ SettingsContent dependency tree has missing imports: {settings_missing_tree}")
+            print(f"WARNING SettingsContent dependency tree has missing imports: {settings_missing_tree}")
             settings_needs_fallback = True
         settings_invalid_contracts = _find_invalid_import_contracts(settings_file)
         if settings_invalid_contracts:
-            print(f"⚠ SettingsContent import/export contract issues: {settings_invalid_contracts}")
+            print(f"WARNING SettingsContent import/export contract issues: {settings_invalid_contracts}")
             settings_needs_fallback = True
 
-    modules_missing_exports = _find_import_without_export_modules(TOOL_BASE_OUTPUT)
+        modules_missing_exports = _find_import_without_export_modules(TOOL_BASE_OUTPUT)
     if modules_missing_exports:
         print(f"⚠ JS modules with import statements but no exports: {modules_missing_exports}")
         home_needs_fallback = True
@@ -579,6 +650,7 @@ def _ensure_non_template_content() -> None:
     if not (home_needs_fallback or settings_needs_fallback):
         print("✓ Content verification passed: non-template files with resolved local imports.")
         return
+
 
     print("⚠ Builder output incomplete or invalid. Applying deterministic Home/Settings fallback files.")
 
@@ -618,7 +690,9 @@ export { TODO_ITEMS_KEY, SETTINGS_KEY, saveJson, loadJson };
             home_file,
             """import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { TODO_ITEMS_KEY, loadJson, saveJson } from '../utils/storage';
+import { TODO_ITEMS_KEY, loadJson, saveJson } from './storage';
+
+const TODO_ITEMS_KEY = 'todoItems';
 
 const createTodo = (title, description) => ({
     id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -723,7 +797,7 @@ export default HomeContent;
             settings_file,
             """import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
-import { SETTINGS_KEY, loadJson, saveJson } from '../utils/storage';
+import { SETTINGS_KEY, loadJson, saveJson } from './storage';
 
 const DEFAULT_SETTINGS = {
     dataPersistence: true,
@@ -919,7 +993,11 @@ def run(content_prompt: str = "Create a Todo App") -> str:
     
     _run_crew_with_retries(inputs)
 
-    # Step 6: Guarantee generated app is not template-only if builders under-deliver.
+    # Step 6a: Deterministically rewrite any absolute 'src/...' imports to relative './' imports.
+    from mycrew.tools.custom_tool import BASE_OUTPUT as TOOL_BASE_OUTPUT
+    fix_absolute_src_imports(TOOL_BASE_OUTPUT)
+
+    # Step 6b: Guarantee generated app is not template-only if builders under-deliver.
     _ensure_non_template_content()
     
     # Step 7: Sync dependencies to package.json

@@ -60,13 +60,13 @@ architect:
       - src/: ALL shared components, hooks, and utils must also be placed directly in src/
       - Target 6-14 files total. DO NOT use subfolders like src/content/ or src/shared/.
     For EACH file, specify exactly:
-      - path (MUST be directly in src/, e.g., src/Button.js)
+      - filename (MUST be PascalCase, e.g., Button.js. All files will be placed in src/ subdirectory)
       - purpose
       - exports
       - state/props (which component manages what state)
       - handlers (functions, event logic)
       - allowed_imports (package/module whitelist - see rules below)
-      - local_import_paths (ONLY relative imports used by that file, each MUST start with ./)
+      - local_import_paths (ONLY relative imports used by that file, each MUST start with ./ and MUST NOT include the .js extension)
     Your architecture must:
       - prevent fragile edge-case behavior
       - keep data flow clear and maintainable
@@ -106,7 +106,7 @@ home_screen_builder:
     Design a clean, professional, minimalist UI (e.g., neutral backgrounds, consistent 16px padding, subtle borders, clear readable typography). Avoid chaotic colors or excessive shadows.
     Ensure every button and interactive element has a fully working onPress handler that actually mutates the underlying state.
     NO MOCK UI ALLOWED: Do not render static/hardcoded arrays. You MUST map over actual React state. If a UI element looks like it should be clickable (e.g., an edit or delete icon), it MUST be wired to a real state-mutating function.
-    ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). NEVER use ../. ALWAYS use flat relative paths starting exactly with ./ (e.g. ./Button). ALWAYS ensure exact case-sensitive filename match and exact export signature match.
+    ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths. If the architecture says a file is "Button.js", YOUR IMPORT MUST BE "./Button". YOU MUST NOT include "src/" or the ".js" extension in the import string. ALWAYS strictly enforce PascalCase (e.g. ./Button, NOT ./button). NEVER use ../.
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
@@ -162,7 +162,7 @@ settings_screen_builder:
     Design a clean, professional, minimalist UI (e.g., neutral backgrounds, consistent 16px padding, subtle borders, clear readable typography). Avoid chaotic colors or excessive shadows.
     Ensure every button and interactive element has a fully working onPress handler that actually mutates the underlying state.
     NO MOCK UI ALLOWED: Do not render static/hardcoded arrays. You MUST map over actual React state. If a UI element looks like it should be clickable (e.g., an edit or delete icon), it MUST be wired to a real state-mutating function.
-    ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). NEVER use ../. ALWAYS use flat relative paths starting exactly with ./ (e.g. ./Button). ALWAYS ensure exact case-sensitive filename match and exact export signature match.
+    ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths. If the architecture says a file is "Button.js", YOUR IMPORT MUST BE "./Button". YOU MUST NOT include "src/" or the ".js" extension in the import string. ALWAYS strictly enforce PascalCase (e.g. ./Button, NOT ./button). NEVER use ../.
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
@@ -220,7 +220,7 @@ react_native_debugger:
     You are a single-threaded executor. You handle one file and one tool call at a time. You never batch operations.
     You excel at finding and fixing:
     1. ZERO MODULE RESOLUTION ERRORS: You are the absolute last line of defense against unresolved imports. You MUST verify every single local import path. You MUST ensure the imported file physically exists. You MUST ensure the export signature (named vs default) exactly matches the import.
-    2. Path Correction & Case Sensitivity: Rewrite ANY imports using '../' or 'src/' to use EXACTLY './' (e.g., changing '../styles' or 'src/styles' to './styles'). VERIFY CASE SENSITIVITY (e.g., if file is Switch.js, import MUST be ./Switch, NOT ./switch). If a file is imported but does not exist, YOU MUST create it using file_writer.
+    2. Path Correction & Case Sensitivity: Rewrite ANY imports using '../' or 'src/' to use EXACTLY './' (e.g., changing 'src/Button' to './Button'). YOU MUST VERIFY CASE SENSITIVITY AND PASCALCASE (e.g., if file is Button.js, import MUST be ./Button, NOT ./button.js). If a file is imported but does not exist, YOU MUST create it using file_writer.
     3. List Safety & Crashes: Adding unique 'id' properties to objects used in FlatList data to prevent 'undefined.toString()' crashes. Adding optional chaining (?.) to prevent null reference errors.
     4. Missing Exports: Ensuring every component file actually has an 'export default' statement.
     5. Non-Working Buttons: Ensuring every Button, TouchableOpacity, or Pressable has a valid 'onPress' prop that points to an existing, functioning state update or handler.
