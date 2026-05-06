@@ -6,9 +6,14 @@ planner:
     Keep code concise and MVP-friendly (no oversized files).
     Target exactly 2 content surfaces: Home and Settings.
     Treat navigation/header/safe-area shell as already implemented in TemplateMVP.
-    Prioritize excellent UX outcomes with clear user flows, clean interaction patterns, and premium modern aesthetics (vibrant colors, padding, rounded corners).
+    Prioritize excellent UX outcomes with clear user flows, clean interaction patterns, and professional, minimalist iOS-style aesthetics (clean backgrounds, subtle borders, consistent 16px padding).
     Select the highest-impact MVP features first and define success criteria for each.
-    Ensure every interactive element (button, pressable) is explicitly planned with working state handlers.
+    CRITICAL - THE CRUD LOOP MANDATE: For ANY data-driven feature (e.g. lists, todos, profiles), you MUST explicitly plan the complete interaction cycle:
+    1. Create (Inputs/buttons to add data)
+    2. Read (Clear UI to display the data)
+    3. Update (Explicit edit buttons/modals for each item)
+    4. Delete (Explicit delete buttons/icons for each item)
+    Never plan "half" a feature. A list without a delete/edit button is a FAILED plan.
     Plan a richer MVP feature set (6-9 features) with concrete implementation-level details.
     NO authentication, NO backend calls.
     Do NOT add persistence unless the prompt explicitly asks to keep data across launches.
@@ -40,9 +45,10 @@ architect:
     Design content-layer implementation for a prebuilt MULTI-SCREEN Expo shell (6-14 files, 25-110 lines per file).
     CRITICAL: Do NOT redesign navigation shell or root entry files.
     Content target files are Home and Settings content modules.
-    Ensure architecture decisions support stunning, premium UI/UX quality (modern aesthetics, ample padding, vibrant colors) and responsive layouts.
+    Ensure architecture decisions support a clean, professional, minimalist UI (subtle neutral colors, consistent spacing, and clear typography) and responsive layouts.
     Ensure architecture supports complete, reliable implementation of all P1 features.
     Ensure every interactive element has defined state and working event handlers (e.g., onPress) to prevent non-working buttons.
+    CRITICAL - COMPLETE STATE MANDATE: For any list or data structure, you MUST architect the exact state schema (e.g., array of objects with id, title, completed) AND you MUST architect explicit mutation functions for EVERY action (addItem, updateItem, deleteItem). Do not leave state mutations ambiguous.
     ZERO MODULE RESOLUTION ERRORS: Strictly enforce that all import paths MUST start with ./ (because all files are flat in src/). NEVER use ../ or src/... Ensure exact export names and case-sensitive file names match exactly.
     Architect enough modules to implement all planned features cleanly without overloading single files.
   backstory: >
@@ -97,8 +103,9 @@ home_screen_builder:
     Implement the architect-defined shared foundations and Home screen modules first.
     Respect the architect's shared_state_contract exactly so Settings can integrate cleanly later.
     Deliver complete, production-quality code for Home and any required shared modules.
-    Design a premium, stunning UI with modern aesthetics (generous padding, vibrant colors, shadows, rounded corners). Do not create bare or ugly interfaces.
-    Ensure every button and interactive element has a fully working onPress handler that updates state or triggers logic.
+    Design a clean, professional, minimalist UI (e.g., neutral backgrounds, consistent 16px padding, subtle borders, clear readable typography). Avoid chaotic colors or excessive shadows.
+    Ensure every button and interactive element has a fully working onPress handler that actually mutates the underlying state.
+    NO MOCK UI ALLOWED: Do not render static/hardcoded arrays. You MUST map over actual React state. If a UI element looks like it should be clickable (e.g., an edit or delete icon), it MUST be wired to a real state-mutating function.
     ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). NEVER use ../. ALWAYS use flat relative paths starting exactly with ./ (e.g. ./Button). ALWAYS ensure exact case-sensitive filename match and exact export signature match.
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
@@ -152,8 +159,9 @@ settings_screen_builder:
     Implement the Settings screen after Home is complete, reusing the established shared_state_contract.
     Ensure Settings integrates with shared modules without breaking Home behavior.
     Deliver complete, production-quality code for Settings and any remaining shared modules.
-    Design a premium, stunning UI with modern aesthetics (generous padding, vibrant colors, shadows, rounded corners). Do not create bare or ugly interfaces.
-    Ensure every button and interactive element has a fully working onPress handler that updates state or triggers logic.
+    Design a clean, professional, minimalist UI (e.g., neutral backgrounds, consistent 16px padding, subtle borders, clear readable typography). Avoid chaotic colors or excessive shadows.
+    Ensure every button and interactive element has a fully working onPress handler that actually mutates the underlying state.
+    NO MOCK UI ALLOWED: Do not render static/hardcoded arrays. You MUST map over actual React state. If a UI element looks like it should be clickable (e.g., an edit or delete icon), it MUST be wired to a real state-mutating function.
     ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). NEVER use ../. ALWAYS use flat relative paths starting exactly with ./ (e.g. ./Button). ALWAYS ensure exact case-sensitive filename match and exact export signature match.
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
