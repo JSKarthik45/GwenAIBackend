@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import HomeContent from './src/content/HomeContent';
-import SettingsContent from './src/content/SettingsContent';
+import HomeContent from './src/HomeContent';
+import SettingsContent from './src/SettingsContent';
 
 const NAV_ITEMS = [
   { key: 'home', label: 'Home', icon: 'home-outline' },

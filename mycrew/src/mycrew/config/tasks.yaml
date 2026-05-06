@@ -52,12 +52,10 @@ design_architecture:
     - Template provides root App.js, SafeAreaView, header, and bottom navbar
     - DO NOT redesign or regenerate navigation shell files
     - Content entry files must be:
-      * src/content/HomeContent.js
-      * src/content/SettingsContent.js
-    - Supporting files under src/:
-      * src/content/: exactly 2 content entry files (25-110 lines each)
-      * src/shared/: shared components/hooks/models used by both pages (20-100 lines each)
-      * src/utils/: helper logic/state utilities (20-90 lines each)
+      * src/HomeContent.js
+      * src/SettingsContent.js
+    - Supporting files MUST also be placed directly in src/ (no subfolders!):
+      * e.g., src/Button.js, src/storage.js
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
     - Design for a stunning, premium UX: use modern styling, vibrant colors, shadows, border-radius, and glassmorphism where appropriate.
     - Architecture must guarantee reliable behavior for all P1 features from the plan
@@ -87,7 +85,7 @@ design_architecture:
           rationale:
     external_dependencies: (EMPTY unless persistent storage is explicitly required, then ONLY @react-native-async-storage/async-storage)
     files:
-      - path: (src/content/X.js and optional src/shared/X.js or src/utils/X.js)
+      - path: (MUST be src/X.js - NO subfolders)
         purpose: (clear description)
         size_estimate: (20-110 lines per file)
         exports:
@@ -96,13 +94,13 @@ design_architecture:
         allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
         local_import_paths: (ONLY relative paths like ./foo or ../shared/foo; never src/...)
     VALIDATION:
-      - Must include exactly 2 content files: src/content/HomeContent.js and src/content/SettingsContent.js
+      - Must include exactly 2 content files: src/HomeContent.js and src/SettingsContent.js
       - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
       - Must not define navigation state or screen-switch handlers (template handles navigation)
-      - Agent may add shared files under src/shared when functionality is reused across pages
+      - Agent may add shared files directly in src/ when functionality is reused across pages
       - Shared modules must be imported consistently by both pages when applicable
       - Architecture must ensure no page references missing exports, handlers, or helpers
-      - All local file imports MUST be relative (./ or ../), never absolute aliases like src/...
+      - All local file imports MUST use same-folder relative paths (e.g. './Button'), because all files are in src/
       - Every local import path must resolve to an existing file in architecture.files
       - FATAL ERROR PREVENTION: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
       - shared_state_contract must include all cross-screen variables and ownership semantics
@@ -112,7 +110,7 @@ design_architecture:
       - Prefer shared modules for reusable feature logic to reduce breakage across pages
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
-      - If persistence is NOT explicitly required: do not include src/utils/storage.js at all
+      - If persistence is NOT explicitly required: do not include src/storage.js at all
       - Never create unused shared/utils files; every generated file must be imported by HomeContent or SettingsContent
       - Do not use Picker from react-native; no external picker packages
       - No placeholder comments or TODOs in generated code
@@ -137,13 +135,13 @@ implement_home_screen:
   description: >
     Implement Home first using the architecture blueprint and shared_state_contract.
     Home phase scope:
-    - src/content/HomeContent.js
-    - any required src/shared/* and src/utils/* files needed by Home and later Settings
-    - DO NOT write src/content/SettingsContent.js in this phase
+    - src/HomeContent.js
+    - any required shared/utils files (all placed directly in src/) needed by Home and later Settings
+    - DO NOT write src/SettingsContent.js in this phase
     Hard rules:
     - Create ONLY files listed in architecture.files and in specified quantities
     - JSX only (no TypeScript/TSX)
-    - Write only content/shared/util files under src/content, src/shared, and src/utils
+    - Write only files directly under src/ (NO subfolders)
     - Write complete, production-quality code:
       * Content files: 25-110 lines each
       * Shared/utils files: 20-100 lines each
@@ -184,13 +182,13 @@ implement_home_screen:
       - Step B: Write that single file with file_writer
       - Step C: Wait for SUCCESS confirmation from tool output
       - Step D: Move to next file only after SUCCESS
-    2) Write only to "src/content/*", optional "src/shared/*", and optional "src/utils/*" paths
+    2) Write only to "src/*" paths (no subfolders allowed)
     3) Use file_reader only if needed
     4) Do NOT call track_dependency (architecture.external_dependencies is already set and complete)
     5) Do not output code in chat; only use file_writer
     6) CRITICAL: Validate every import against allowed_imports before writing code
-    6.1) Validate every local import path is relative (./ or ../) and file-resolvable
-    7) If persistent storage used, create src/utils/storage.js with all AsyncStorage logic
+    6.1) Validate every local import path is relative (usually just ./) and file-resolvable
+    7) If persistent storage used, create src/storage.js with all AsyncStorage logic
     7.1) If persistence is not explicitly required, do NOT create storage utils or import them
     7.2) Do not create unused shared/utils files; every file must be imported by HomeContent or SettingsContent
     7.3) Ensure every local import has a matching export (named vs default) in the target file
@@ -206,7 +204,7 @@ implement_home_screen:
     10) NEVER output markdown/json fences before tool calls; send direct tool calls only
     11) Task is invalid if assistant returns narrative text without required file_writer calls.
     12) Required successful writes for completion:
-      - src/content/HomeContent.js
+      - src/HomeContent.js
       - plus any files imported by HomeContent.js
     13) CRITICAL FAILURE RULE: Do not return DONE until every Home-phase file in architecture.files is written or confirmed unnecessary by zero imports.
     14) NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
@@ -227,8 +225,8 @@ implement_settings_screen:
   description: >
     Implement Settings second, after Home phase is complete.
     Settings phase scope:
-    - MUST implement src/content/SettingsContent.js
-    - MAY update shared/src/utils files only if needed for shared_state_contract compliance
+    - MUST implement src/SettingsContent.js
+    - MAY update other shared/utils files only if needed for shared_state_contract compliance
     - MUST preserve Home behavior and shared variable compatibility
     Hard rules:
     - Create/update ONLY files listed in architecture.files and in specified quantities
@@ -266,12 +264,12 @@ implement_settings_screen:
     1.5) Task is invalid if assistant returns narrative text without required file_writer calls
     1.6) First assistant response MUST be a file_writer tool call (never narrative text)
     1.7) If tool call fails, retry with smaller file payload; do not switch to prose
-    1.8) NEVER emit shorthand tool payloads such as bracketed paths like [src/content/SettingsContent.js]
+    1.8) NEVER emit shorthand tool payloads such as bracketed paths like [src/SettingsContent.js]
          and NEVER emit partial arguments; always provide full valid JSON tool arguments.
     1.9) Required successful writes for completion:
-      - src/content/SettingsContent.js
+      - src/SettingsContent.js
     1.10) CRITICAL FAILURE RULE: Do not return DONE until every Settings-phase file in architecture.files is written or confirmed unnecessary by zero imports.
-    1.11) Before returning DONE, verify that every local import used by src/content/SettingsContent.js resolves to an existing file under src/shared or src/utils; if not, create missing modules first.
+    1.11) Before returning DONE, verify that every local import used by src/SettingsContent.js resolves to an existing file under src/; if not, create missing modules first.
     1.12) Also verify import/export compatibility for every SettingsContent local import: if importing a named symbol, that symbol must be exported by the target module; if importing default, target must export default.
     1.13) NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
       If multiple files are needed, write exactly one file per response and wait for success before the next file.
@@ -286,7 +284,7 @@ implement_settings_screen:
     1.17) NEVER output markdown/json fences before tool calls; send direct tool calls only.
     1.18) No placeholders or TODOs. Complete working code only.
     1.19) Required completion safety:
-      - MUST write src/content/SettingsContent.js
+      - MUST write src/SettingsContent.js
       - MUST write any shared/utils dependencies imported by SettingsContent.js
       - If imports are missing after write, create missing files before DONE
     Final response after all tool calls: DONE
@@ -305,15 +303,15 @@ debug_runtime_logic:
    2. You are strictly forbidden from outputting more than ONE tool call per response.
      You must never use a JSON array for tool calls.
      If you need to fix three files, fix the first one, wait for SUCCESS, and only then proceed to the next in a separate turn.
-   3. Start by calling file_reader for src/content/HomeContent.js only.
+   3. Start by calling file_reader for src/HomeContent.js only.
      Read it, analyze it, and if it needs a fix, call file_writer.
-     Only after HomeContent.js is fully verified and fixed may you move to src/content/SettingsContent.js.
+     Only after HomeContent.js is fully verified and fixed may you move to src/SettingsContent.js.
    4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style. This prevents unresolved imports.
    4.0 ZERO MODULE RESOLUTION ERRORS GUARANTEE:
       - You MUST read EVERY SINGLE file imported locally by HomeContent.js and SettingsContent.js using file_reader.
       - Verify the file ACTUALLY exists. If not, create it.
       - Verify the export type EXACTLY matches. If the file has 'export default Button', the import MUST be 'import Button from ...'. If it has 'export const Button', the import MUST be 'import { Button } from ...'.
-      - Ensure NO absolute local imports (e.g., 'src/shared/Button'). Rewrite them to relative paths (e.g., '../shared/Button').
+      - Ensure NO absolute local imports (e.g., 'src/Button'). Rewrite them to relative paths (e.g., './Button').
    4.0.1 CHECK BUTTONS & CRASHES: Verify all buttons have valid onPress handlers. Add optional chaining (?.) to prevent app crashes when accessing nested data. Ensure UI has adequate padding and doesn't look bad.
    4.0.2 REACT NATIVE STRICTNESS: Scan for and fix any bare text outside of <Text> tags. Scan for and fix any invalid style values like '10px' to just 10.
    4.1 If HomeContent or SettingsContent imports a utils/shared file, read that file and confirm the imported names exist.
