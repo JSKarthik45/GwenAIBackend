@@ -136,10 +136,14 @@ prompt_submission_lock = asyncio.Lock()
 RATE_LIMIT_PER_24H = 5  # Max 5 generations per user per 24 hours
 TTL_HOURS = 24  # Results expire after 24 hours
 PROMPT_DEDUPE_WINDOW_MINUTES = 15
+KEEP_GENERATED_MVP = False  # Set True to skip deleting GeneratedMVP during testing
 
 
 def cleanup_generated_mvp_folder() -> None:
     """Delete GeneratedMVP folder after result persistence to free disk space."""
+    if KEEP_GENERATED_MVP:
+        logger.info("[cleanup] KEEP_GENERATED_MVP=True; skipping delete")
+        return
     output_dir = Path(__file__).resolve().parent / "GeneratedMVP"
     if not output_dir.exists():
         logger.info("[cleanup] GeneratedMVP does not exist; skipping delete")

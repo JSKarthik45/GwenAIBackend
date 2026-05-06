@@ -15,7 +15,15 @@ plan_requirements:
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
     - Prioritize strong UI/UX quality: clear hierarchy, balanced spacing, readable typography, and intuitive interactions
-    - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is required)
+    - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is explicitly required by the user)
+    - Do NOT use third-party libraries like moment/date-fns/dayjs or any other external packages
+    - Do NOT include persistence by default; only add persistence if the prompt explicitly asks to keep data across launches
+    - Do NOT use Picker (react-native Picker is deprecated and requires an external package)
+    - Use built-in controls only (e.g., Pressable, Switch, Button) for settings choices
+    - Content must be specific to the current prompt; do NOT reuse or reference prior app themes
+    - Do NOT leave template placeholder text in Home/Settings content
+    - Do NOT leave empty useEffect blocks or stub handlers; implement real logic
+    - Do NOT render Text as a button; use Pressable or Button for interactions
   expected_output: >
     Detailed MVP feature spec with 6-9 features and clear Home/Settings content behavior.
     REQUIRED OUTPUT FORMAT:
@@ -55,6 +63,11 @@ design_architecture:
     - Define clear state ownership, data flow, and edge-case handling for each feature
     - Prefer maintainable, testable, and readable structure over clever complexity
     - CRITICAL: ONLY use react and react-native modules
+    - Do NOT include persistence unless explicitly required by the user prompt
+    - Do NOT use Picker; build settings controls with Pressable/Switch/Button only
+    - Do NOT use third-party libraries like moment/date-fns/dayjs or any other external packages
+    - Architecture must match the current prompt; no leftover features from previous prompts
+    - Do not include files that are not used by HomeContent or SettingsContent
     REQUIRED OUTPUT FORMAT:
     architecture_summary: <description of Home/Settings content behavior inside template shell>
     shared_state_contract:
@@ -70,7 +83,7 @@ design_architecture:
       integration_rules:
         - rule:
           rationale:
-    external_dependencies: (EMPTY unless persistent storage required, then ONLY @react-native-async-storage/async-storage)
+    external_dependencies: (EMPTY unless persistent storage is explicitly required, then ONLY @react-native-async-storage/async-storage)
     files:
       - path: (src/content/X.js and optional src/shared/X.js or src/utils/X.js)
         purpose: (clear description)
@@ -89,6 +102,7 @@ design_architecture:
       - Architecture must ensure no page references missing exports, handlers, or helpers
       - All local file imports MUST be relative (./ or ../), never absolute aliases like src/...
       - Every local import path must resolve to an existing file in architecture.files
+      - Content files must import shared/utils using ../shared/* or ../utils/* only
       - shared_state_contract must include all cross-screen variables and ownership semantics
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
@@ -96,6 +110,16 @@ design_architecture:
       - Prefer shared modules for reusable feature logic to reduce breakage across pages
       - If NO persistent storage: allowed_imports MUST only contain ["react", "react-native"]
       - If persistent storage required: allowed_imports in storage utils CAN include "@react-native-async-storage/async-storage"
+      - If persistence is NOT explicitly required: do not include src/utils/storage.js at all
+      - Never create unused shared/utils files; every generated file must be imported by HomeContent or SettingsContent
+      - Do not use Picker from react-native; no external picker packages
+      - No placeholder comments or TODOs in generated code
+      - No third-party libraries like moment/date-fns/dayjs in any file
+      - Home/Settings content must reflect the current prompt domain only
+      - No template placeholder text in Home/Settings content
+      - No empty useEffect blocks or stub handlers in Home/Settings
+      - No Text-as-button interactions; use Pressable/Button only
+      - No unused files; every file in architecture.files must be imported by HomeContent or SettingsContent
       - CRITICAL RULE: NO hallucinated modules like expo/storage, expo/filesystem, expo-sqlite
       - NO navigation, NO other @react-native-* packages, NO external packages except async-storage
       - 6-14 files total
@@ -132,6 +156,7 @@ implement_home_screen:
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
     - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
+    - Content files must import shared/utils using ../shared/* or ../utils/* only
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
     - Proper styling (StyleSheet), event handlers, and high-quality UX polish in content blocks
     - Ensure content layout looks refined on both common phone sizes and larger devices
@@ -161,6 +186,16 @@ implement_home_screen:
     6) CRITICAL: Validate every import against allowed_imports before writing code
     6.1) Validate every local import path is relative (./ or ../) and file-resolvable
     7) If persistent storage used, create src/utils/storage.js with all AsyncStorage logic
+    7.1) If persistence is not explicitly required, do NOT create storage utils or import them
+    7.2) Do not create unused shared/utils files; every file must be imported by HomeContent or SettingsContent
+    7.3) Ensure every local import has a matching export (named vs default) in the target file
+    7.4) Do not import local modules unless you will write them before returning DONE
+    7.5) Do NOT use Picker; use Pressable/Switch/Button-based controls
+    7.6) Do NOT import third-party libraries like moment/date-fns/dayjs
+    7.7) Home/Settings content MUST be aligned to the current prompt only
+    7.8) Remove any template placeholder copy from Home/Settings content
+    7.9) Do not leave empty useEffect blocks or stub handlers
+    7.10) Do not use Text as a button; use Pressable or Button
     8) Keep each file payload compact (<~90 lines) to avoid tool-call JSON failures
     9) If a feature needs too much code, split logic into additional shared/helper files listed in architecture
     10) NEVER output markdown/json fences before tool calls; send direct tool calls only
@@ -198,9 +233,20 @@ implement_settings_screen:
     - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
     - Use ONLY imports declared in allowed_imports for each file
     - Local file imports MUST be relative (./ or ../), never alias imports like src/...
+    - Content files must import shared/utils using ../shared/* or ../utils/* only
     - Ensure each local import resolves to an existing generated file
     - Use file_reader to verify current disk state; do not rely on remembered prior task output text
     - Preserve App.js and index.js unchanged
+    - If persistence is not explicitly required, do NOT create storage utils or import them
+    - Do not create unused shared/utils files; every file must be imported by HomeContent or SettingsContent
+    - Ensure every local import has a matching export (named vs default) in the target file
+    - Do not import local modules unless you will write them before returning DONE
+    - Do NOT use Picker; use Pressable/Switch/Button-based controls
+    - Do NOT import third-party libraries like moment/date-fns/dayjs
+    - Home/Settings content MUST be aligned to the current prompt only
+    - Remove any template placeholder copy from Home/Settings content
+    - Do not leave empty useEffect blocks or stub handlers
+    - Do not use Text as a button; use Pressable or Button
     Tool usage:
     1) Use file_writer for one file at a time
     1.0) NEVER call file_writer more than once in a single response
@@ -254,7 +300,18 @@ debug_runtime_logic:
      Read it, analyze it, and if it needs a fix, call file_writer.
      Only after HomeContent.js is fully verified and fixed may you move to src/content/SettingsContent.js.
    4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style.
+   4.1 If HomeContent or SettingsContent imports a utils/shared file, read that file and confirm the imported names exist.
+   4.2 If a file imports @react-native-async-storage/async-storage, verify it is required by the prompt; if not, remove storage usage.
+   4.3 Scan for syntax errors (e.g., stray semicolons after JSX blocks) and fix them in-place.
+   4.4 Replace any Picker usage with Pressable/Switch/Button controls.
+   4.5 Remove placeholder comments or TODOs in generated code.
+   4.6 Remove any third-party library imports (moment/date-fns/dayjs) and refactor to plain JS.
+   4.7 If Home/Settings content does not match the current prompt domain, replace it with prompt-specific content.
+   4.8 Remove any template placeholder copy from Home/Settings content.
+   4.9 Replace Text-as-button interactions with Pressable or Button.
+   4.10 Replace empty useEffect blocks or stub handlers with real logic or remove them.
    5. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
+   5.1 Fix content imports that incorrectly use ./ for shared/utils; rewrite to ../shared or ../utils and create missing files if needed.
    6. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
    7. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
    8. NO HALLUCINATED FUNCTIONS RULE: Do not use placeholder functions like loadTodoItemsFromStorage().
@@ -262,13 +319,13 @@ debug_runtime_logic:
    9. NO-NARRATIVE RULE: You must NOT provide narrative, headers, step lists, or explanations.
      Your first response MUST be a file_reader tool call to inspect the codebase.
    10. MANDATORY REPAIR RULE: If you find any logic/runtime bug (including missing IDs, path mismatches, missing exports, or import/export contract mismatch),
-      you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
+     you MUST call file_writer immediately to patch the affected file. Do not only describe the bug.
    11. NO BATCHING RULE: You are strictly forbidden from calling a tool more than once per response.
-      If multiple files are needed, handle exactly one file per response and wait for success before the next file.
+     If multiple files are needed, handle exactly one file per response and wait for success before the next file.
    12. COMPLETE JSON RULE: When calling file_writer, provide the full valid payload including the target path and the complete file content.
-      Never emit a shorthand path, bracketed filename, or partial tool argument.
+     Never emit a shorthand path, bracketed filename, or partial tool argument.
    13. STRICT COMPLETION RULE: Return 'DONE' only after physically verifying files and applying required patches.
-      Any text-only response without tool calls is a FAILURE.
+     Any text-only response without tool calls is a FAILURE.
   expected_output: >-
     A crash-free codebase. All imports are resolved, and all list items have IDs.
     Return 'DONE' only after all identified bugs are patched and all required verification/repair tool calls have been executed.

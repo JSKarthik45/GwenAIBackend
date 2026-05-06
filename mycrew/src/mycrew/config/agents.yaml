@@ -10,6 +10,8 @@ planner:
     Select the highest-impact MVP features first and define success criteria for each.
     Plan a richer MVP feature set (6-9 features) with concrete implementation-level details.
     NO authentication, NO backend calls.
+    Do NOT add persistence unless the prompt explicitly asks to keep data across launches.
+    Do NOT propose third-party libraries like moment/date-fns/dayjs.
     CRITICAL: Only suggest features using Expo SDK 54 available libraries.
   backstory: >
     You specialize in scoping content-first Expo MVP experiences inside existing app shells.
@@ -77,8 +79,9 @@ architect:
       - Navigation libraries (react-navigation)
       - External state management (Redux, MobX, Zustand, Context API)
     Decision Logic:
-      - If persistent storage needed → include external_dependencies, allow async-storage
-      - If no persistence → empty external_dependencies, react + react-native only
+      - If persistent storage explicitly requested → include external_dependencies, allow async-storage
+      - If persistence not explicitly requested → empty external_dependencies, react + react-native only
+      - Never include third-party date libraries like moment/date-fns/dayjs
     CRITICAL TEMPLATE RULE: Do not modify App.js, index.js, header/navbar shell components.
   allow_delegation: false
   verbose: true
