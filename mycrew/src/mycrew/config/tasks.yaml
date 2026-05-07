@@ -102,6 +102,7 @@ design_architecture:
       - Architecture must ensure no page references missing exports, handlers, or helpers
       - All local file imports MUST be relative (./ or ../), never absolute aliases like src/...
       - Every local import path must resolve to an existing file in architecture.files
+      - Content files must import shared/utils using ../shared/* or ../utils/* only
       - shared_state_contract must include all cross-screen variables and ownership semantics
       - Every planned P1 feature must map to concrete handlers/state in architecture
       - Architecture must include empty/loading/error/validation UI behavior where relevant
@@ -155,6 +156,7 @@ implement_home_screen:
       RULE: If import not in allowed_imports, do NOT use it. Do NOT hallucinate modules.
     - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
     - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
+    - Content files must import shared/utils using ../shared/* or ../utils/* only
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
     - Proper styling (StyleSheet), event handlers, and high-quality UX polish in content blocks
     - Ensure content layout looks refined on both common phone sizes and larger devices
@@ -231,6 +233,7 @@ implement_settings_screen:
     - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
     - Use ONLY imports declared in allowed_imports for each file
     - Local file imports MUST be relative (./ or ../), never alias imports like src/...
+    - Content files must import shared/utils using ../shared/* or ../utils/* only
     - Ensure each local import resolves to an existing generated file
     - Use file_reader to verify current disk state; do not rely on remembered prior task output text
     - Preserve App.js and index.js unchanged
@@ -303,11 +306,12 @@ debug_runtime_logic:
    4.4 Replace any Picker usage with Pressable/Switch/Button controls.
    4.5 Remove placeholder comments or TODOs in generated code.
    4.6 Remove any third-party library imports (moment/date-fns/dayjs) and refactor to plain JS.
-    4.7 If Home/Settings content does not match the current prompt domain, replace it with prompt-specific content.
-    4.8 Remove any template placeholder copy from Home/Settings content.
-    4.9 Replace Text-as-button interactions with Pressable or Button.
-    4.10 Replace empty useEffect blocks or stub handlers with real logic or remove them.
+   4.7 If Home/Settings content does not match the current prompt domain, replace it with prompt-specific content.
+   4.8 Remove any template placeholder copy from Home/Settings content.
+   4.9 Replace Text-as-button interactions with Pressable or Button.
+   4.10 Replace empty useEffect blocks or stub handlers with real logic or remove them.
    5. FIX PATHS: If an import says '../styles' but the file is actually at './styles', rewrite the file with the correct relative path.
+   5.1 Fix content imports that incorrectly use ./ for shared/utils; rewrite to ../shared or ../utils and create missing files if needed.
    6. ADD IDs: Ensure any 'add' or 'create' functions (e.g., 'createTask') include a unique ID: 'id: Date.now().toString()'.
    7. EXECUTE REPAIRS: If any of these bugs are found, use 'file_writer' to overwrite the specific file with the corrected code.
    8. NO HALLUCINATED FUNCTIONS RULE: Do not use placeholder functions like loadTodoItemsFromStorage().
