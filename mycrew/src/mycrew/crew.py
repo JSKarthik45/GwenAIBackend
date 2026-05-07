@@ -36,7 +36,7 @@ def _int_env(name: str, default: int) -> int:
 
 @CrewBase
 class Mycrew():
-    """Simplified single-page MVP crew: plan, build, debug."""
+    """Mycrew crew that plans, designs, and builds a multi-file codebase from a prompt."""
 
     agents: list[BaseAgent]
     tasks: list[Task]
@@ -47,21 +47,53 @@ class Mycrew():
     def planner(self) -> Agent:
         planner_llm = LLM(model=_required_llm_env("PLANNER_LLM"))
         return Agent(
-            config=self.agents_config['planner'],  # type: ignore[index]
+            config=self.agents_config['planner'],
             llm=planner_llm,
             verbose=False,
-            max_tokens=1500,
+            max_tokens=2000,
         )
 
     @agent
-    def builder(self) -> Agent:
+    def architect(self) -> Agent:
+        architect_llm = LLM(model=_required_llm_env("ARCHITECT_LLM"))
+        return Agent(
+            config=self.agents_config['architect'],
+            llm=architect_llm,
+            verbose=False,  # Disable verbose to reduce context
+            max_tokens=2600,  # Support richer multi-file architecture outputs
+        )
+
+    @agent
+    def home_screen_builder(self) -> Agent:
         feature_llm = LLM(
             model=_optional_llm_env("HOME_SCREEN_BUILDER_LLM", "FEATURE_BUILDER_LLM"),
             temperature=0,
         )
-        max_iter = max(_int_env("FEATURE_MAX_ITER", 8), 5)
+        # Strict limits to prevent request payloads exceeding Groq's tool parameter limit.
+        # Fewer iterations + output length limit = smaller context accumulation.
+        max_iter = max(_int_env("HOME_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 8)), 5)
         return Agent(
-            config=self.agents_config['builder'],  # type: ignore[index]
+            config=self.agents_config['home_screen_builder'],
+            llm=feature_llm,
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+            verbose=False,  # Disable verbose to reduce context size
+            max_iter=max_iter,
+            max_tokens=1400,  # Allow slightly richer per-step reasoning
+            max_retry_limit=1,  # Reduce repeated oversized retries
+            allow_delegation=False,
+            memory=False,
+            respect_context_window=True,  # Auto-truncate if needed
+        )
+
+    @agent
+    def settings_screen_builder(self) -> Agent:
+        feature_llm = LLM(
+            model=_optional_llm_env("SETTINGS_SCREEN_BUILDER_LLM", "FEATURE_BUILDER_LLM"),
+            temperature=0,
+        )
+        max_iter = max(_int_env("SETTINGS_FEATURE_MAX_ITER", _int_env("FEATURE_MAX_ITER", 8)), 5)
+        return Agent(
+            config=self.agents_config['settings_screen_builder'],
             llm=feature_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,
@@ -80,7 +112,7 @@ class Mycrew():
             temperature=0,
         )
         return Agent(
-            config=self.agents_config['react_native_debugger'],  # type: ignore[index]
+            config=self.agents_config['react_native_debugger'],
             llm=debugger_llm,
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
             verbose=False,
@@ -95,19 +127,32 @@ class Mycrew():
     @task
     def plan_requirements(self) -> Task:
         return Task(
-            config=self.tasks_config['plan_requirements'],  # type: ignore[index]
+            config=self.tasks_config['plan_requirements'],
         )
 
     @task
-    def build_app(self) -> Task:
+    def design_architecture(self) -> Task:
         return Task(
-            config=self.tasks_config['build_app'],  # type: ignore[index]
+            config=self.tasks_config['design_architecture'], 
+        )
+
+    @task
+    def implement_home_screen(self) -> Task:
+        return Task(
+            config=self.tasks_config['implement_home_screen'],
+            tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
+        )
+
+    @task
+    def implement_settings_screen(self) -> Task:
+        return Task(
+            config=self.tasks_config['implement_settings_screen'],
             tools=[FileReaderTool(), FileWriterTool(), TrackDependencyTool()],
         )
 
     @crew
     def crew(self) -> Crew:
-        """Creates the simplified single-page crew."""
+        """Creates the multi-agent crew for planning, architecture, and implementation."""
         return Crew(
             agents=self.agents,
             tasks=self.tasks,
