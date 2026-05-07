@@ -163,8 +163,6 @@ implement_home_screen:
     - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers.
     - Ensure content layout looks refined on both common phone sizes and larger devices
     - CRITICAL: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
-    - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
     - Add robust guardrails in UI behavior: empty states, input validation feedback, and failure-safe interactions where needed
     - Keep interactions snappy and predictable; avoid ambiguous controls
     - MUST preserve template shell/navigation files unchanged:
@@ -240,8 +238,6 @@ implement_settings_screen:
     - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers.
     - Use ONLY imports declared in allowed_imports for each file
     - CRITICAL: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
-    - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
     - Local file imports MUST be relative (./ or ../), never alias imports like src/...
     - Ensure each local import resolves to an existing generated file
     - Use file_reader to verify current disk state; do not rely on remembered prior task output text
@@ -310,7 +306,6 @@ debug_runtime_logic:
      Only after HomeContent.js is fully verified and fixed may you move to src/content/SettingsContent.js.
    4. CROSS-CHECK IMPORTS: For every local import, verify the target file exists and the export type (Named vs Default) matches the import style. This prevents unresolved imports.
    4.0 CHECK BUTTONS & CRASHES: Verify all buttons have valid onPress handlers. Add optional chaining (?.) to prevent app crashes when accessing nested data. Ensure UI has adequate padding and doesn't look bad.
-   4.0.1 REACT NATIVE STRICTNESS: Scan for and fix any bare text outside of <Text> tags. Scan for and fix any invalid style values like '10px' to just 10.
    4.1 If HomeContent or SettingsContent imports a utils/shared file, read that file and confirm the imported names exist.
    4.2 If a file imports @react-native-async-storage/async-storage, verify it is required by the prompt; if not, remove storage usage.
    4.3 Scan for syntax errors (e.g., stray semicolons after JSX blocks) and fix them in-place.
