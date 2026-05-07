@@ -86,14 +86,14 @@ design_architecture:
           rationale:
     external_dependencies: (EMPTY unless persistent storage is explicitly required, then ONLY @react-native-async-storage/async-storage)
     files:
-      - filename: (MUST be PascalCase, e.g. Button.js NOT button.js. All files will be placed in src/ subdirectory)
+      - path: (MUST be src/X.js - NO subfolders)
         purpose: (clear description)
         size_estimate: (20-110 lines per file)
         exports:
         state/hooks: (which useState/hooks this file uses)
         handlers:
         allowed_imports: (ONLY react and/or react-native, OR @react-native-async-storage/async-storage if in external_dependencies)
-        local_import_paths: (ONLY relative paths like ./foo; NEVER use ../ or src/...; NEVER include .js extension)
+        local_import_paths: (ONLY relative paths like ./foo or ../shared/foo; never src/...)
     VALIDATION:
       - Must include exactly 2 content files: src/HomeContent.js and src/SettingsContent.js
       - Must NOT include App.js, index.js, src/components/TopHeader.js, or src/components/BottomNavbar.js
@@ -101,8 +101,7 @@ design_architecture:
       - Agent may add shared files directly in src/ when functionality is reused across pages
       - Shared modules must be imported consistently by both pages when applicable
       - Architecture must ensure no page references missing exports, handlers, or helpers
-      - All local file imports MUST use same-folder relative paths (e.g. './Button'), because all files are in src/.
-      - CRITICAL: YOU MUST NOT include 'src/' or the '.js' extension in the import statement. (e.g. if the file is Button.js, the import must be './Button', NOT 'src/Button' and NOT './Button.js')
+      - All local file imports MUST use same-folder relative paths (e.g. './Button'), because all files are in src/
       - Every local import path must resolve to an existing file in architecture.files
       - FATAL ERROR PREVENTION: Prevent unresolved imports by absolutely ensuring exact spelling of relative paths and matching named/default exports.
       - shared_state_contract must include all cross-screen variables and ownership semantics
@@ -163,7 +162,7 @@ implement_home_screen:
     - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers that mutate real state.
     - FORBIDDEN: Do not use static/hardcoded mock data. You must wire all lists and inputs to actual React state. All "Edit" or "Delete" UI elements must trigger real functions.
     - Ensure content layout looks refined on both common phone sizes and larger devices
-    - FATAL ERROR PREVENTION (MODULE RESOLUTION): NEVER use absolute local paths. If the architecture says a file is "Button.js", YOUR IMPORT MUST BE "./Button". YOU MUST NOT include "src/" or the ".js" extension in the import string. ALWAYS strictly enforce PascalCase (e.g. ./Button, NOT ./button). NEVER use ../.
+    - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     - CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
     - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
@@ -242,7 +241,7 @@ implement_settings_screen:
     - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers that mutate real state.
     - FORBIDDEN: Do not use static/hardcoded mock data. You must wire all lists and inputs to actual React state. All "Edit" or "Delete" UI elements must trigger real functions.
     - Use ONLY imports declared in allowed_imports for each file
-    - FATAL ERROR PREVENTION (MODULE RESOLUTION): NEVER use absolute local paths. If the architecture says a file is "Button.js", YOUR IMPORT MUST BE "./Button". YOU MUST NOT include "src/" or the ".js" extension in the import string. ALWAYS strictly enforce PascalCase (e.g. ./Button, NOT ./button). NEVER use ../.
+    - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     - CRITICAL: Ensure perfect JSX syntax. All braces and tags MUST be properly closed (e.g. <Component prop="value" />).
     - CRITICAL: Use valid React Native styles (e.g., use numbers instead of 'px' strings for padding/margin).
