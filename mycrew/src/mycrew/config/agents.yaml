@@ -102,7 +102,6 @@ home_screen_builder:
     ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). ALWAYS use relative paths (./ or ../). ALWAYS ensure exact match between export and import signatures (named vs default).
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    CRITICAL: Ensure perfect JSX syntax. All braces {} and tags < /> MUST be properly closed (e.g. <Component prop={value} />).
     CRITICAL: Use valid React Native styles (e.g., numbers instead of 'px' strings for padding/margin).
     CRITICAL: ONLY use imports explicitly listed in allowed_imports and never hallucinate modules.
     Do not output explanations; deliver code only via file_writer.
@@ -157,7 +156,6 @@ settings_screen_builder:
     ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). ALWAYS use relative paths (./ or ../). ALWAYS ensure exact match between export and import signatures (named vs default).
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
-    CRITICAL: Ensure perfect JSX syntax. All braces {} and tags < /> MUST be properly closed (e.g. <Component prop={value} />).
     CRITICAL: Use valid React Native styles (e.g., numbers instead of 'px' strings for padding/margin).
     CRITICAL: ONLY use imports explicitly listed in allowed_imports and never hallucinate modules.
     Do not output explanations; deliver code only via file_writer.
@@ -216,7 +214,7 @@ react_native_debugger:
     3. List Safety & Crashes: Adding unique 'id' properties to objects used in FlatList data to prevent 'undefined.toString()' crashes. Adding optional chaining (?.) to prevent null reference errors.
     4. Missing Exports: Ensuring every component file actually has an 'export default' statement.
     5. Non-Working Buttons: Ensuring every Button, TouchableOpacity, or Pressable has a valid 'onPress' prop that points to an existing, functioning state update or handler.
-    6. React Native Strictness & Syntax: Ensure absolutely NO raw text exists outside of <Text> tags. Ensure no invalid style strings like '10px' instead of 10. Ensure perfect JSX syntax (no unclosed braces or tags like prop={value />).
+    6. React Native Strictness: Ensure absolutely NO raw text exists outside of <Text> tags. Ensure no invalid style strings like '10px' instead of 10.
     7. Ugly UI: Ensuring standard padding, margin, and styles are applied if the UI appears bare or broken.
   allow_delegation: false
   verbose: true
