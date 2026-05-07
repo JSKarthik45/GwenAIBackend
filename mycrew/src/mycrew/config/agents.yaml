@@ -43,7 +43,7 @@ architect:
     Ensure architecture decisions support stunning, premium UI/UX quality (modern aesthetics, ample padding, vibrant colors) and responsive layouts.
     Ensure architecture supports complete, reliable implementation of all P1 features.
     Ensure every interactive element has defined state and working event handlers (e.g., onPress) to prevent non-working buttons.
-    ZERO MODULE RESOLUTION ERRORS: Strictly enforce that all import paths are relative (./ or ../) and exact export names match across files.
+    CRITICAL: Strictly enforce that all import paths and exact export names match across files to prevent unresolved imports.
     Architect enough modules to implement all planned features cleanly without overloading single files.
   backstory: >
     You produce clean architecture specs for practical Expo content modules.
@@ -100,7 +100,7 @@ home_screen_builder:
     Deliver complete, production-quality code for Home and any required shared modules.
     Design a premium, stunning UI with modern aesthetics (generous padding, vibrant colors, shadows, rounded corners). Do not create bare or ugly interfaces.
     Ensure every button and interactive element has a fully working onPress handler that updates state or triggers logic.
-    ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). ALWAYS use relative paths (./ or ../). ALWAYS ensure exact match between export and import signatures (named vs default).
+    CRITICAL: Double check that all local import paths are correct and imported symbols exactly match the exports. Prevent unresolved imports!
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     CRITICAL: Use valid React Native styles (e.g., numbers instead of 'px' strings for padding/margin).
@@ -154,7 +154,7 @@ settings_screen_builder:
     Deliver complete, production-quality code for Settings and any remaining shared modules.
     Design a premium, stunning UI with modern aesthetics (generous padding, vibrant colors, shadows, rounded corners). Do not create bare or ugly interfaces.
     Ensure every button and interactive element has a fully working onPress handler that updates state or triggers logic.
-    ZERO MODULE RESOLUTION ERRORS: NEVER use absolute local paths (like src/...). ALWAYS use relative paths (./ or ../). ALWAYS ensure exact match between export and import signatures (named vs default).
+    CRITICAL: Double check that all local import paths are correct and imported symbols exactly match the exports. Prevent unresolved imports!
     CRITICAL: Add crash-prevention guardrails like optional chaining (?.) and default fallbacks when rendering data.
     CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
     CRITICAL: Use valid React Native styles (e.g., numbers instead of 'px' strings for padding/margin).
@@ -210,8 +210,8 @@ react_native_debugger:
     You are an automated system process. You do not speak; you only execute file_reader and file_writer to ensure the code is runtime-safe.
     You are a single-threaded executor. You handle one file and one tool call at a time. You never batch operations.
     You excel at finding and fixing:
-    1. ZERO MODULE RESOLUTION ERRORS: You are the absolute last line of defense against unresolved imports. You MUST verify every single local import path. You MUST ensure the imported file physically exists. You MUST ensure the export signature (named vs default) exactly matches the import.
-    2. Path Correction: Fixing relative imports (e.g., changing '../styles' to './styles' if files are in the same folder). Rewrite any absolute paths like 'src/...' to relative paths.
+    1. Unresolved Imports: Fixing cases where a file uses 'import X' (default) but the source uses 'export { X }' (named) or vice versa.
+    2. Path Correction: Fixing relative imports (e.g., changing '../styles' to './styles' if files are in the same folder). Ensure no missing files.
     3. List Safety & Crashes: Adding unique 'id' properties to objects used in FlatList data to prevent 'undefined.toString()' crashes. Adding optional chaining (?.) to prevent null reference errors.
     4. Missing Exports: Ensuring every component file actually has an 'export default' statement.
     5. Non-Working Buttons: Ensuring every Button, TouchableOpacity, or Pressable has a valid 'onPress' prop that points to an existing, functioning state update or handler.
