@@ -14,9 +14,8 @@ plan_requirements:
     - Feature planning must include required user inputs, validation rules, state transitions, and expected behavior
     - NO backend/auth/external APIs
     - Keep implementation concise (not oversized files)
-    - Prioritize clean, professional, minimalist UI/UX quality: subtle neutral colors, consistent 16px padding, clear hierarchy, readable typography, and intuitive interactive elements.
+    - Prioritize extremely premium UI/UX quality: modern aesthetics, vibrant colors, ample padding, clear hierarchy, readable typography, and intuitive interactive elements (buttons that provide feedback).
     - Ensure every interactive element (button, pressable) is explicitly planned with working state handlers.
-    - CRITICAL - COMPLETE CRUD FLOW: Every planned feature must explicitly detail its full interactive lifecycle. If planning a list, you MUST mandate UI elements for Creating, Reading, Updating, and Deleting items. Do not allow 'read-only' dummy lists.
     - Minimize external libraries (react + react-native only; allow @react-native-async-storage/async-storage only if persistence is explicitly required by the user)
     - Do NOT use third-party libraries like moment/date-fns/dayjs or any other external packages
     - Do NOT include persistence by default; only add persistence if the prompt explicitly asks to keep data across launches
@@ -58,10 +57,10 @@ design_architecture:
     - Supporting files MUST also be placed directly in src/ (no subfolders!):
       * e.g., src/Button.js, src/storage.js
     - Use React hooks for state management (useState, useReducer, useCallback, useEffect)
-    - Design for a clean, professional UX: use minimalist styling, neutral backgrounds, subtle borders, and consistent spacing. Avoid chaotic colors or glassmorphism.
+    - Design for a stunning, premium UX: use modern styling, vibrant colors, shadows, border-radius, and glassmorphism where appropriate.
     - Architecture must guarantee reliable behavior for all P1 features from the plan
     - FATAL ERROR PREVENTION (MODULE RESOLUTION): You MUST explicitly map out the exact import statements that each file will use. You MUST guarantee that all file paths (relative only) and export names (named vs default) exactly match between files.
-    - Define clear state ownership, strict data schemas (e.g., objects with specific keys like 'id', 'title'), and explicit mutation functions for every required CRUD operation (add, edit, delete).
+    - Define clear state ownership, data flow, and edge-case handling for each feature
     - Prefer maintainable, testable, and readable structure over clever complexity
     - CRITICAL: ONLY use react and react-native modules
     - Do NOT include persistence unless explicitly required by the user prompt
@@ -158,9 +157,8 @@ implement_home_screen:
     - Local file imports MUST be relative (./ or ../) and must resolve to existing files.
     - NEVER use local alias imports like "src/shared/..." or "src/utils/..." in generated code.
     - Use React hooks (useState, useEffect, useCallback, useReducer) for content state
-    - Implement professional, minimalist styling (StyleSheet) (e.g., neutral backgrounds, consistent 16px padding, subtle borders). Avoid chaotic colors or excessive shadows.
-    - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers that mutate real state.
-    - FORBIDDEN: Do not use static/hardcoded mock data. You must wire all lists and inputs to actual React state. All "Edit" or "Delete" UI elements must trigger real functions.
+    - Implement premium styling (StyleSheet) with modern design aesthetics (vibrant colors, generous padding, rounded corners, shadows). Ensure the app does not look bad or basic.
+    - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers.
     - Ensure content layout looks refined on both common phone sizes and larger devices
     - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
@@ -237,9 +235,8 @@ implement_settings_screen:
     - Keep shared_state_contract keys, defaults, and update semantics stable unless explicitly allowed
     - Write complete, production-quality code without TODOs/placeholders
     - Implement all Settings-targeted planned features end-to-end (UI + state + handlers)
-    - Implement professional, minimalist styling (StyleSheet) (e.g., neutral backgrounds, consistent 16px padding, subtle borders). Avoid chaotic colors or excessive shadows.
-    - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers that mutate real state.
-    - FORBIDDEN: Do not use static/hardcoded mock data. You must wire all lists and inputs to actual React state. All "Edit" or "Delete" UI elements must trigger real functions.
+    - Implement premium styling (StyleSheet) with modern design aesthetics (vibrant colors, generous padding, rounded corners, shadows). Ensure the app does not look bad or basic.
+    - Ensure all buttons and interactive elements work perfectly with wired-up onPress handlers.
     - Use ONLY imports declared in allowed_imports for each file
     - FATAL ERROR PREVENTION (MODULE RESOLUTION): Before declaring DONE, you must guarantee that every single local import path is relative (./ or ../) and the imported file actually exports that exact symbol name/default. Module resolve errors are unacceptable.
     - CRITICAL: Never place raw text outside of a <Text> component (this causes instant crashes).
