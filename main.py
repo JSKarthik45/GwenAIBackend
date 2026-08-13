@@ -277,10 +277,11 @@ def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
         qr_url = _build_qr_url_from_snack_url(snack_url)
         
         qr_data = {
-            "qr_code": _normalize_qr_url(qr_url),
+            "qr_code": _normalize_qr_url(snack_url),
             "snack_id": snack_id,
             "snack_url": _normalize_qr_url(snack_url),
             "qr_image_url": _normalize_qr_url(qr_url),
+            "expo_go_url": _normalize_qr_url(snack_url),
             "project_id": project_id,
         }
         
@@ -649,8 +650,12 @@ async def get_qr_data(request: QRRequest):
                     if isinstance(qr_blob, dict):
                         if isinstance(qr_blob.get("qr_code"), str):
                             qr_blob["qr_code"] = _normalize_qr_url(qr_blob["qr_code"])
+                        if isinstance(qr_blob.get("snack_url"), str):
+                            qr_blob["snack_url"] = _normalize_qr_url(qr_blob["snack_url"])
                         if isinstance(qr_blob.get("qr_image_url"), str):
                             qr_blob["qr_image_url"] = _normalize_qr_url(qr_blob["qr_image_url"])
+                        if isinstance(qr_blob.get("expo_go_url"), str):
+                            qr_blob["expo_go_url"] = _normalize_qr_url(qr_blob["expo_go_url"])
                 popped_data = _deep_normalize_response_strings(popped_data)
                 payload = {
                     "status": "completed",
