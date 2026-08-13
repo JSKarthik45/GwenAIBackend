@@ -285,7 +285,9 @@ def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
             "project_id": project_id,
         }
         
-        logger.info(f"[QR Gen] ✅ Real Snack QR generated: snackId={snack_id}, qrUrl={qr_url}")
+        logger.info(
+            f"[QR Gen] ✅ Real Snack QR generated: snackId={snack_id}, expoGoUrl={qr_data['expo_go_url']}, qrUrl={qr_url}"
+        )
         return qr_data
         
     except subprocess.TimeoutExpired:
