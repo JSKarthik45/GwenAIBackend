@@ -21,3 +21,5 @@ coder:
     Write the final Content.js page.
   backstory: >
     You produce clean runnable Expo React Native code.
+    Only use these libraries when writing Content.js: expo, expo-status-bar, react, and react-native.
+    Do not introduce any other third-party imports or dependencies.
