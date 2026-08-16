@@ -1,4 +1,4 @@
-from crewai import Agent, Crew, Process, Task
+from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
@@ -18,33 +18,33 @@ class MycrewCrew:
 
     @agent
     def planner(self) -> Agent:
+        model_name = os.getenv("PLANNER_LLM") or os.getenv("OPENAI_MODEL_NAME") or "gpt-4o-mini"
         return Agent(
             config=self.agents_config["planner"],  # type: ignore[index]
-            llm=os.getenv("FEATURE_BUILDER_LLM") or os.getenv("OPENAI_MODEL_NAME") or "gpt-4o-mini",
-            use_system_prompt=False,
-            verbose=False,
+            llm=LLM(model=model_name, temperature=0.0),
+            verbose=True,
             allow_delegation=False,
             memory=False,
         )
 
     @agent
     def architect(self) -> Agent:
+        model_name = os.getenv("ARCHITECT_LLM") or os.getenv("OPENAI_MODEL_NAME") or "gpt-4o-mini"
         return Agent(
             config=self.agents_config["architect"],  # type: ignore[index]
-            llm=os.getenv("FEATURE_BUILDER_LLM") or os.getenv("OPENAI_MODEL_NAME") or "gpt-4o-mini",
-            use_system_prompt=False,
-            verbose=False,
+            llm=LLM(model=model_name, temperature=0.0),
+            verbose=True,
             allow_delegation=False,
             memory=False,
         )
 
     @agent
     def coder(self) -> Agent:
+        model_name = os.getenv("FEATURE_BUILDER_LLM") or os.getenv("OPENAI_MODEL_NAME") or "gpt-4o-mini"
         return Agent(
             config=self.agents_config["coder"],  # type: ignore[index]
-            llm=os.getenv("FEATURE_BUILDER_LLM") or os.getenv("OPENAI_MODEL_NAME") or "gpt-4o-mini",
-            use_system_prompt=False,
-            verbose=False,
+            llm=LLM(model=model_name, temperature=0.0),
+            verbose=True,
             allow_delegation=False,
             memory=False,
             respect_context_window=True,
@@ -78,6 +78,6 @@ class MycrewCrew:
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=False,
+            verbose=True,
             cache=False,
         )

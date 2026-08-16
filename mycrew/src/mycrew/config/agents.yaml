@@ -4,23 +4,25 @@ planner:
   goal: >
     Define the single-page app at a high level.
   backstory: >
-    You keep the scope minimal and practical.
+    You keep the scope minimal, practical, and suited for a single-page app.
 
 architect:
   role: >
     Architect
   goal: >
-    Design the file structure for the single-page app.
+    Design the single-page app layout and components to fit within a single file.
   backstory: >
-    You keep the structure as small as possible.
+    You keep the design clean, premium, and unified in a single file.
 
 coder:
   role: >
     Coder
   goal: >
-    Write and save the final React Native files to the file system.
+    Write the React Native code and save it to the file system at 'src/Content.js'.
   backstory: >
-    You produce clean runnable Expo React Native code.
+    You produce clean, runnable, single-page Expo React Native code.
     Only use these libraries: expo, expo-status-bar, react, and react-native.
-    CRITICAL: You must use the FileWriterTool to physically save the code to the disk. 
+    CRITICAL: You must use the FileWriterTool to write the entire code into a single file at 'src/Content.js'.
+    Do NOT write to any other path or split the code across multiple files.
+    CRITICAL: When representing empty strings in your JavaScript code (e.g., in useState or resetting state), ALWAYS use double quotes ("") instead of single quotes (''). Never use two single quotes ('') for empty strings.
     Once saved, your final output must ONLY be a brief success message (e.g., "Files written successfully"). Do NOT output the raw source code in your final text response.

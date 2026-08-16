@@ -1,21 +1,25 @@
 plan_task:
   description: >
-    Create a brief plan for this Expo React Native app: {content_prompt}
+    Create a brief plan for this single-page Expo React Native app: {content_prompt}
+    Focus on a single-screen layout with interactive features (add, delete, toggle status, etc.).
   expected_output: >
-    A short bullet list with the key UI goals for one page.
+    A short bullet list with the key UI features and states for the single-page app.
   agent: planner
 
 architecture_task:
   description: >
-    Turn the plan into a minimal implementation outline for a single Content.js file.
+    Design the component structure, state variables, and handlers for the single-page app.
+    Ensure everything is designed to fit inside a single 'src/Content.js' file.
   expected_output: >
-    A concise outline describing the page structure and behavior.
+    A concise description of the state variables and visual layout for 'src/Content.js'.
   agent: architect
 
 code_task:
   description: >
-    Write the code for the app based on the architecture outline and save it to the src/ directory using your tools.
-    Make it a polished app that matches this prompt: {content_prompt}
+    Implement the single-page React Native app and save it to 'src/Content.js' using the FileWriterTool.
+    Ensure the code is robust, free of syntax errors, and fully functional.
+    Only write to 'src/Content.js'. Do NOT write to any other path.
+    CRITICAL: Always use double quotes ("") for empty strings (e.g., useState("") or resetting input) to prevent quote parsing issues.
   expected_output: >
-    A brief confirmation message stating which files were successfully written to the disk. Do NOT return the source code itself.
+    A brief confirmation message: "Files written successfully". Do NOT return the source code itself.
   agent: coder
