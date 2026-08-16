@@ -49,6 +49,7 @@ class MycrewCrew:
             memory=False,
             respect_context_window=True,
             tools=[FileReaderTool(), FileWriterTool()],
+            max_rpm=1,
         )
 
     @task
