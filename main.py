@@ -657,6 +657,79 @@ async def github_device_auth(request: Request):
     }
 
 
+@app.post("/api/github/create-repo")
+@app.post("/api/github/repo/create")
+@app.post("/api/github/repository/create")
+@app.post("/api/github/setup-repo")
+@app.post("/api/auth/github/create-repo")
+async def github_create_repo(request: Request):
+    """Create a private repo and push the current generated app for a connected user."""
+    payload = await _read_json_body(request)
+    user_id = str(payload.get("user_id") or "").strip()
+    access_token = str(payload.get("access_token") or payload.get("token") or "").strip()
+
+    if not access_token and user_id:
+        access_token = github_connected_accounts.get(user_id, "").strip()
+    if not access_token:
+        raise HTTPException(status_code=400, detail="GitHub access_token or user_id is required")
+
+    service = GitHubRepoService(client_id=os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID)
+    repo_info = service.create_repository(
+        access_token,
+        repo_name=GitHubRepoService.DEFAULT_REPO_NAME,
+        description=GitHubRepoService.DEFAULT_DESCRIPTION,
+    )
+    if not repo_info.get("html_url"):
+        raise HTTPException(status_code=500, detail="GitHub repository was created but no URL was returned")
+
+    return {
+        "status": "success",
+        "message": "GitHub repo created successfully.",
+        "repo": repo_info,
+        "repo_url": repo_info.get("html_url"),
+    }
+
+
+@app.post("/api/github/push")
+@app.post("/api/github/repo/push")
+@app.post("/api/github/repository/push")
+async def github_push_repo(request: Request):
+    """Push a generated app directory to the connected GitHub repo using the Git Data API."""
+    payload = await _read_json_body(request)
+    user_id = str(payload.get("user_id") or "").strip()
+    access_token = str(payload.get("access_token") or payload.get("token") or "").strip()
+    repo_name = str(payload.get("repo_name") or GitHubRepoService.DEFAULT_REPO_NAME if GitHubRepoService else "gwen-ai-generated-mvp").strip()
+    repo_owner = str(payload.get("owner") or "").strip()
+    directory_path = str(payload.get("directory_path") or "GeneratedMVP/MyApp").strip()
+
+    if not access_token and user_id:
+        access_token = github_connected_accounts.get(user_id, "").strip()
+    if not access_token:
+        raise HTTPException(status_code=400, detail="GitHub access_token or user_id is required")
+    if not repo_owner:
+        raise HTTPException(status_code=400, detail="GitHub repo owner is required")
+
+    app_dir = Path(__file__).resolve().parent / directory_path
+    if not app_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Generated app directory not found: {directory_path}")
+
+    service = GitHubRepoService(client_id=os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID)
+    files = service.collect_files_from_directory(app_dir)
+    push_result = service.push_files_to_repo(
+        access_token,
+        repo_owner,
+        repo_name,
+        files,
+        branch="main",
+    )
+
+    return {
+        "status": "success",
+        "message": "GitHub repo push complete.",
+        "push": push_result,
+    }
+
+
 @app.post("/api/github/device-auth/status")
 @app.post("/api/github/device-status")
 @app.post("/api/github/device-flow/status")
@@ -669,7 +742,7 @@ async def github_device_auth_status(request: Request):
     if not device_code:
         raise HTTPException(status_code=400, detail="device_code is required")
 
-    user_id = str(payload.get("user_id") or "").strip()
+    user_id = str(payload.get("user_id") or payload.get("userId") or "").strip()
     session = github_auth_sessions.get(device_code)
     if not session:
         return {"status": "error", "message": "device_code not found or session expired"}
