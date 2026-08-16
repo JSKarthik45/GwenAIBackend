@@ -147,6 +147,8 @@ github_auth_sessions: dict[str, dict] = {}
 # User -> access token for connected GitHub accounts. This is used when a user
 # has completed GitHub device authorization without requiring any env vars.
 github_connected_accounts: dict[str, str] = {}
+# User -> repo metadata for the generated repo. Create once per connected user.
+github_user_repos: dict[str, dict] = {}
 
 
 def cleanup_generated_mvp_folder() -> None:
@@ -194,8 +196,24 @@ def _extract_github_repo_payload(repo_info: Optional[dict]) -> dict:
     }
 
 
+def _ensure_user_github_repo(user_id: str, access_token: str) -> dict:
+    """Create a repo once per user and cache the metadata for later generations."""
+    if user_id in github_user_repos:
+        return github_user_repos[user_id]
+
+    service = GitHubRepoService(client_id=os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID)
+    repo_info = service.create_repository(
+        access_token,
+        repo_name=GitHubRepoService.DEFAULT_REPO_NAME,
+        description=GitHubRepoService.DEFAULT_DESCRIPTION,
+    )
+    github_user_repos[user_id] = repo_info
+    return repo_info
+
+
 def _maybe_push_generated_mvp_to_github(
     project_id: str,
+    user_id: str,
     output_path: str = "GeneratedMVP/MyApp",
     access_token: Optional[str] = None,
 ) -> Optional[dict]:
@@ -204,7 +222,7 @@ def _maybe_push_generated_mvp_to_github(
         logger.info("[github] GitHub integration module unavailable; skipping push")
         return None
 
-    token = (access_token or "").strip()
+    token = (access_token or github_connected_accounts.get(user_id) or "").strip()
     if not token:
         logger.info("[github] No GitHub access token available for this user; skipping repo push")
         return None
@@ -215,14 +233,9 @@ def _maybe_push_generated_mvp_to_github(
         return None
 
     try:
-        service = GitHubRepoService(client_id=os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID)
-        repo_info = service.create_repository(
-            token,
-            repo_name=GitHubRepoService.DEFAULT_REPO_NAME,
-            description=GitHubRepoService.DEFAULT_DESCRIPTION,
-        )
-        files = service.collect_files_from_directory(app_dir)
-        push_result = service.push_files_to_repo(
+        repo_info = _ensure_user_github_repo(user_id, token)
+        files = GitHubRepoService().collect_files_from_directory(app_dir)
+        push_result = GitHubRepoService().push_files_to_repo(
             token,
             repo_info["owner"],
             repo_info["name"],
@@ -491,6 +504,7 @@ async def generate_mvp_task(
                 resolved_token = (github_access_token or github_connected_accounts.get(user_id) or "").strip()
                 github_payload = _maybe_push_generated_mvp_to_github(
                     project_id,
+                    user_id,
                     "GeneratedMVP/MyApp",
                     access_token=resolved_token,
                 )
@@ -638,12 +652,14 @@ async def github_device_auth(request: Request):
         )
     )
 
+    user_id = str(payload.get("user_id") or payload.get("userId") or "").strip()
     github_auth_sessions[auth_data["device_code"]] = {
         "device_code": auth_data["device_code"],
         "user_code": auth_data["user_code"],
         "verification_uri": auth_data["verification_uri"],
         "interval": auth_data["interval"],
         "client_id": client_id,
+        "user_id": user_id,
         "status": "pending",
     }
 
@@ -744,6 +760,8 @@ async def github_device_auth_status(request: Request):
 
     user_id = str(payload.get("user_id") or payload.get("userId") or "").strip()
     session = github_auth_sessions.get(device_code)
+    if not user_id and session and session.get("user_id"):
+        user_id = str(session.get("user_id")).strip()
     if not session:
         return {"status": "error", "message": "device_code not found or session expired"}
 
