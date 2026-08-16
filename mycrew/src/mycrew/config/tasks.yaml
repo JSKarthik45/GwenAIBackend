@@ -14,8 +14,8 @@ architecture_task:
 
 code_task:
   description: >
-    Write src/Content.js for the app based on the architecture outline. 
-    Make it a polished single page that matches this prompt: {content_prompt}
+    Write the code for the app based on the architecture outline and save it to the src/ directory using your tools.
+    Make it a polished app that matches this prompt: {content_prompt}
   expected_output: >
-    Exactly ONE valid JavaScript code block for src/Content.js. Do NOT wrap the output in markdown backticks (e.g., ```javascript). Output ONLY the raw, parsed code so it can be written directly to the file system.
+    A brief confirmation message stating which files were successfully written to the disk. Do NOT return the source code itself.
   agent: coder
