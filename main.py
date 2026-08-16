@@ -169,13 +169,30 @@ def cleanup_generated_mvp_folder() -> None:
 
 
 def _extract_github_repo_payload(repo_info: Optional[dict]) -> dict:
-    """Normalize repo metadata into the core completion payload consumed by the QR page."""
+    """Normalize repo metadata into completion payload, including explicit error details."""
     if not isinstance(repo_info, dict):
-        return {"github_repo": None, "github_repo_url": None}
+        return {
+            "github_repo": None,
+            "github_repo_url": "GitHub integration did not return repository details.",
+            "github_repo_error": "GitHub integration did not return repository details.",
+        }
+
+    error_message = str(repo_info.get("error") or "").strip() if isinstance(repo_info, dict) else ""
+    if error_message:
+        return {
+            "github_repo": None,
+            "github_repo_url": f"ERROR: {error_message}",
+            "github_repo_error": error_message,
+        }
 
     repo = repo_info.get("repo") if isinstance(repo_info.get("repo"), dict) else repo_info
     if not isinstance(repo, dict):
-        return {"github_repo": None, "github_repo_url": None}
+        fallback_error = "GitHub repository data was missing from integration response."
+        return {
+            "github_repo": None,
+            "github_repo_url": f"ERROR: {fallback_error}",
+            "github_repo_error": fallback_error,
+        }
 
     repo_name = repo.get("name") or repo.get("repo_name")
     owner = repo.get("owner") or repo.get("owner_name")
@@ -193,6 +210,7 @@ def _extract_github_repo_payload(repo_info: Optional[dict]) -> dict:
             "html_url": html_url,
         },
         "github_repo_url": html_url,
+        "github_repo_error": None,
     }
 
 
@@ -216,21 +234,24 @@ def _maybe_push_generated_mvp_to_github(
     user_id: str,
     output_path: str = "GeneratedMVP/MyApp",
     access_token: Optional[str] = None,
-) -> Optional[dict]:
+) -> dict:
     """Push generated app files to a fresh GitHub repo when the user is connected."""
     if GitHubRepoService is None:
-        logger.info("[github] GitHub integration module unavailable; skipping push")
-        return None
+        message = "GitHub integration module unavailable; skipping push"
+        logger.info(f"[github] {message}")
+        return {"error": message}
 
     token = (access_token or github_connected_accounts.get(user_id) or "").strip()
     if not token:
-        logger.info("[github] No GitHub access token available for this user; skipping repo push")
-        return None
+        message = "No GitHub access token available for this user; skipping repo push"
+        logger.info(f"[github] {message}")
+        return {"error": message}
 
     app_dir = Path(__file__).resolve().parent / output_path
     if not app_dir.exists():
-        logger.warning(f"[github] App directory not found for project {project_id}: {app_dir}")
-        return None
+        message = f"App directory not found for project {project_id}: {app_dir}"
+        logger.warning(f"[github] {message}")
+        return {"error": message}
 
     try:
         repo_info = _ensure_user_github_repo(user_id, token)
@@ -245,8 +266,9 @@ def _maybe_push_generated_mvp_to_github(
         logger.info(f"[github] ✅ GitHub push completed for project {project_id}: {repo_info['full_name']}")
         return {"repo": repo_info, "push": push_result}
     except Exception as exc:  # pragma: no cover - depends on live GitHub auth state
-        logger.warning(f"[github] Failed to push generated MVP to GitHub for project {project_id}: {exc}")
-        return None
+        message = f"Failed to push generated MVP to GitHub for project {project_id}: {exc}"
+        logger.warning(f"[github] {message}")
+        return {"error": message}
 
 
 def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
@@ -508,8 +530,10 @@ async def generate_mvp_task(
                     "GeneratedMVP/MyApp",
                     access_token=resolved_token,
                 )
-                if github_payload:
-                    results_dict[project_id]["data"].update(_extract_github_repo_payload(github_payload))
+                results_dict[project_id]["data"].update(_extract_github_repo_payload(github_payload))
+                if github_payload.get("error"):
+                    logger.info(f"[Task {project_id}] GitHub metadata attached with error: {github_payload['error']}")
+                else:
                     logger.info(f"[Task {project_id}] ✅ GitHub repo metadata attached to completion payload")
                 cleanup_generated_mvp_folder()
                 
