@@ -27,3 +27,4 @@ snack-output.txt
 .env
 
 GeneratedMVP/
+/__pycache__

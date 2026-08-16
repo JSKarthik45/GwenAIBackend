@@ -13,9 +13,8 @@ from typing import Optional
 from urllib.parse import quote
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -142,6 +141,9 @@ RATE_LIMIT_PER_24H = 5  # Max 5 generations per user per 24 hours
 TTL_HOURS = 24  # Results expire after 24 hours
 PROMPT_DEDUPE_WINDOW_MINUTES = 15
 KEEP_GENERATED_MVP = False  # Set True to skip deleting GeneratedMVP during testing
+
+# GitHub device login session registry keyed by device_code.
+github_auth_sessions: dict[str, dict] = {}
 
 
 def cleanup_generated_mvp_folder() -> None:
@@ -576,9 +578,107 @@ class QRResponse(BaseModel):
     error: Optional[str] = None
 
 
+async def _read_json_body(request: Request) -> dict:
+    """Read a JSON payload safely, returning an empty dict when the request has no body."""
+    try:
+        body = await request.body()
+        if not body:
+            return {}
+        return json.loads(body.decode("utf-8"))
+    except Exception:
+        return {}
+
+
 # ============================================================================
 # API ENDPOINTS
 # ============================================================================
+
+@app.post("/api/github/device-auth")
+@app.post("/api/github/device")
+@app.post("/api/github/device-flow")
+@app.post("/api/auth/github/device")
+@app.post("/api/auth/github/device-flow")
+async def github_device_auth(request: Request):
+    """Start the GitHub OAuth device flow and return the verification details for the frontend."""
+    payload = await _read_json_body(request)
+    client_id = str(payload.get("client_id") or os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID if GitHubRepoService else "").strip()
+    if not client_id:
+        raise HTTPException(status_code=400, detail="GitHub client_id is required")
+
+    service = GitHubRepoService(client_id=client_id)
+    auth_data = service.request_device_and_user_code(
+        callback=lambda data: logger.info(
+            f"[github-device-auth] verification_uri={data.get('verification_uri')} user_code={data.get('user_code')}"
+        )
+    )
+
+    github_auth_sessions[auth_data["device_code"]] = {
+        "device_code": auth_data["device_code"],
+        "user_code": auth_data["user_code"],
+        "verification_uri": auth_data["verification_uri"],
+        "interval": auth_data["interval"],
+        "client_id": client_id,
+        "status": "pending",
+    }
+
+    return {
+        "status": "pending",
+        "device_code": auth_data["device_code"],
+        "user_code": auth_data["user_code"],
+        "verification_uri": auth_data["verification_uri"],
+        "interval": auth_data["interval"],
+        "message": "Open the verification URL and enter the GitHub user code to authorize Gwen AI.",
+    }
+
+
+@app.post("/api/github/device-auth/status")
+@app.post("/api/github/device-status")
+@app.post("/api/github/device-flow/status")
+@app.post("/api/auth/github/device/status")
+async def github_device_auth_status(request: Request):
+    """Poll the GitHub OAuth device flow and return the current status to the frontend."""
+    payload = await _read_json_body(request)
+    device_code = str(payload.get("device_code") or payload.get("deviceCode") or "").strip()
+
+    if not device_code:
+        raise HTTPException(status_code=400, detail="device_code is required")
+
+    session = github_auth_sessions.get(device_code)
+    if not session:
+        return {"status": "error", "message": "device_code not found or session expired"}
+
+    if session.get("access_token"):
+        return {
+            "status": "success",
+            "device_code": device_code,
+            "access_token": session["access_token"],
+            "message": "GitHub authorization succeeded.",
+        }
+
+    service = GitHubRepoService(client_id=session["client_id"])
+    try:
+        token = service.poll_for_access_token(
+            device_code=device_code,
+            interval=session.get("interval", 5),
+            callback=lambda data: logger.info(f"[github-device-status] token acquired for device_code={device_code}"),
+        )
+        session["access_token"] = token
+        session["status"] = "success"
+        return {
+            "status": "success",
+            "device_code": device_code,
+            "access_token": token,
+            "message": "GitHub authorization succeeded.",
+        }
+    except GitHubOAuthError as exc:
+        msg = str(exc)
+        logger.warning(f"[github-device-status] auth error for device_code={device_code}: {msg}")
+        if "expired" in msg.lower():
+            session["status"] = "expired"
+            return {"status": "expired", "message": "GitHub device authorization expired."}
+        session["status"] = "pending"
+        return {"status": "pending", "message": "Authorization is still pending."}
+
 
 @app.get("/api/wakeBackend")
 async def wake_backend():
