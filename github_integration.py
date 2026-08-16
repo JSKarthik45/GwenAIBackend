@@ -92,6 +92,22 @@ class GitHubRepoService:
 
         return payload
 
+    def check_device_code_status(self, device_code: str) -> dict[str, Any]:
+        """Step 1.2: Check if the user completes device authorization once without polling."""
+        response = self._request_json(
+            "POST",
+            "https://github.com/login/oauth/access_token",
+            payload={
+                "client_id": self.client_id,
+                "device_code": device_code,
+                "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            },
+            headers={"Accept": "application/json"},
+        )
+        if not isinstance(response, dict):
+            raise GitHubOAuthError("Unexpected OAuth token response format.")
+        return response
+
     def poll_for_access_token(
         self,
         device_code: str,

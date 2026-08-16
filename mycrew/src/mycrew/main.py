@@ -40,7 +40,7 @@ def _upload_to_snack(app_dir: Path) -> None:
     print(result.stdout.strip())
 
 
-def run(content_prompt: str = "Create a simple single-page app") -> str:
+def run(content_prompt: str = "Create a simple single-page app", upload_snack: bool = True) -> str:
     load_dotenv(override=True)
 
     print("🎯 Generating MVP: MyApp")
@@ -54,8 +54,9 @@ def run(content_prompt: str = "Create a simple single-page app") -> str:
     crew = _build_crew()
     crew.kickoff(inputs={"content_prompt": content_prompt})
 
-    print("\n📦 Uploading generated app to Snack...")
-    _upload_to_snack(GENERATED_APP_DIR)
+    if upload_snack:
+        print("\n📦 Uploading generated app to Snack...")
+        _upload_to_snack(GENERATED_APP_DIR)
 
     print("\n✅ MVP app generation complete!")
     return "crew_completed"
