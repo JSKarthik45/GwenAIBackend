@@ -42,6 +42,11 @@ if str(_CREW_SRC) not in sys.path:
 
 from mycrew.main import run as run_generator
 
+try:
+    from github_integration import GitHubRepoService
+except Exception:  # pragma: no cover - optional integration dependency
+    GitHubRepoService = None
+
 # Load environment variables
 load_dotenv()
 
@@ -154,6 +159,68 @@ def cleanup_generated_mvp_folder() -> None:
         logger.info("[cleanup] Deleted GeneratedMVP after result save")
     except Exception as e:
         logger.warning(f"[cleanup] Failed to delete GeneratedMVP: {e}")
+
+
+def _maybe_push_generated_mvp_to_github(project_id: str, output_path: str = "GeneratedMVP/MyApp") -> Optional[dict]:
+    """Push generated app files to a fresh GitHub repo before cleanup when configured."""
+    if GitHubRepoService is None:
+        logger.info("[github] GitHub integration module unavailable; skipping push")
+        return None
+
+    if os.getenv("GITHUB_PUSH_ON_GENERATE", "false").lower() not in {"1", "true", "yes", "on"}:
+        logger.info("[github] GITHUB_PUSH_ON_GENERATE disabled; skipping push")
+        return None
+
+    app_dir = Path(__file__).resolve().parent / output_path
+    if not app_dir.exists():
+        logger.warning(f"[github] App directory not found for project {project_id}: {app_dir}")
+        return None
+
+    try:
+        service = GitHubRepoService(client_id=os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID)
+        access_token = os.getenv("GITHUB_ACCESS_TOKEN")
+
+        if access_token:
+            repo_info = service.create_repository(
+                access_token,
+                repo_name=os.getenv("GITHUB_REPO_NAME", GitHubRepoService.DEFAULT_REPO_NAME),
+                description=os.getenv("GITHUB_REPO_DESCRIPTION", GitHubRepoService.DEFAULT_DESCRIPTION),
+            )
+            files = service.collect_files_from_directory(app_dir)
+            push_result = service.push_files_to_repo(
+                access_token,
+                repo_info["owner"],
+                repo_info["name"],
+                files,
+                branch=repo_info["default_branch"],
+            )
+            logger.info(f"[github] ✅ GitHub push completed for project {project_id}: {repo_info['full_name']}")
+            return {"repo": repo_info, "push": push_result}
+
+        auth_info = service.authenticate_device_flow(
+            callback=lambda payload: logger.info(
+                f"[github] Device auth required: verification_uri={payload.get('verification_uri')}, "
+                f"user_code={payload.get('user_code')}"
+            )
+        )
+        repo_info = service.create_repository(
+            auth_info["access_token"],
+            repo_name=os.getenv("GITHUB_REPO_NAME", GitHubRepoService.DEFAULT_REPO_NAME),
+            description=os.getenv("GITHUB_REPO_DESCRIPTION", GitHubRepoService.DEFAULT_DESCRIPTION),
+        )
+        files = service.collect_files_from_directory(app_dir)
+        push_result = service.push_files_to_repo(
+            auth_info["access_token"],
+            repo_info["owner"],
+            repo_info["name"],
+            files,
+            branch=repo_info["default_branch"],
+        )
+        logger.info(f"[github] ✅ GitHub push completed via device flow for project {project_id}: {repo_info['full_name']}")
+        return {"auth": auth_info, "repo": repo_info, "push": push_result}
+    except Exception as exc:  # pragma: no cover - depends on live GitHub auth state
+        logger.warning(f"[github] Failed to push generated MVP to GitHub for project {project_id}: {exc}")
+        return None
 
 
 def _generate_qr_placeholder(project_id: str, output_path: str) -> dict:
@@ -401,7 +468,8 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 # Mark as completed only after QR generation is done
                 results_dict[project_id]["data"]["status"] = "completed"
                 logger.info(f"[Task {project_id}] ✅ QR generated and status set to completed")
-                
+
+                _maybe_push_generated_mvp_to_github(project_id, "GeneratedMVP/MyApp")
                 cleanup_generated_mvp_folder()
                 
                 # Update user's usage tracker
