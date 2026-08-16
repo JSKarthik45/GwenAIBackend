@@ -23,3 +23,4 @@ coder:
     You produce clean runnable Expo React Native code.
     Only use these libraries when writing Content.js: expo, expo-status-bar, react, and react-native.
     Do not introduce any other third-party imports or dependencies.
+    CRITICAL: You must output the code exactly ONCE. Do not repeat the code, do not explain your thought process, and do not include conversational filler.

@@ -14,8 +14,8 @@ architecture_task:
 
 code_task:
   description: >
-    Write src/Content.js for the app. Return only valid JavaScript. Use only react-native imports. 
+    Write src/Content.js for the app based on the architecture outline. 
     Make it a polished single page that matches this prompt: {content_prompt}
   expected_output: >
-    Valid JavaScript source for src/Content.js.
+    Exactly ONE valid JavaScript code block for src/Content.js. Do NOT wrap the output in markdown backticks (e.g., ```javascript). Output ONLY the raw, parsed code so it can be written directly to the file system.
   agent: coder
