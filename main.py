@@ -144,6 +144,9 @@ KEEP_GENERATED_MVP = False  # Set True to skip deleting GeneratedMVP during test
 
 # GitHub device login session registry keyed by device_code.
 github_auth_sessions: dict[str, dict] = {}
+# User -> access token for connected GitHub accounts. This is used when a user
+# has completed GitHub device authorization without requiring any env vars.
+github_connected_accounts: dict[str, str] = {}
 
 
 def cleanup_generated_mvp_folder() -> None:
@@ -163,14 +166,47 @@ def cleanup_generated_mvp_folder() -> None:
         logger.warning(f"[cleanup] Failed to delete GeneratedMVP: {e}")
 
 
-def _maybe_push_generated_mvp_to_github(project_id: str, output_path: str = "GeneratedMVP/MyApp") -> Optional[dict]:
-    """Push generated app files to a fresh GitHub repo before cleanup when configured."""
+def _extract_github_repo_payload(repo_info: Optional[dict]) -> dict:
+    """Normalize repo metadata into the core completion payload consumed by the QR page."""
+    if not isinstance(repo_info, dict):
+        return {"github_repo": None, "github_repo_url": None}
+
+    repo = repo_info.get("repo") if isinstance(repo_info.get("repo"), dict) else repo_info
+    if not isinstance(repo, dict):
+        return {"github_repo": None, "github_repo_url": None}
+
+    repo_name = repo.get("name") or repo.get("repo_name")
+    owner = repo.get("owner") or repo.get("owner_name")
+    full_name = repo.get("full_name") or (f"{owner}/{repo_name}" if owner and repo_name else None)
+    html_url = repo.get("html_url") or repo.get("url") or (
+        f"https://github.com/{full_name}" if full_name else None
+    )
+
+    return {
+        "github_repo": {
+            "owner": owner,
+            "name": repo_name,
+            "full_name": full_name,
+            "default_branch": repo.get("default_branch") or "main",
+            "html_url": html_url,
+        },
+        "github_repo_url": html_url,
+    }
+
+
+def _maybe_push_generated_mvp_to_github(
+    project_id: str,
+    output_path: str = "GeneratedMVP/MyApp",
+    access_token: Optional[str] = None,
+) -> Optional[dict]:
+    """Push generated app files to a fresh GitHub repo when the user is connected."""
     if GitHubRepoService is None:
         logger.info("[github] GitHub integration module unavailable; skipping push")
         return None
 
-    if os.getenv("GITHUB_PUSH_ON_GENERATE", "false").lower() not in {"1", "true", "yes", "on"}:
-        logger.info("[github] GITHUB_PUSH_ON_GENERATE disabled; skipping push")
+    token = (access_token or "").strip()
+    if not token:
+        logger.info("[github] No GitHub access token available for this user; skipping repo push")
         return None
 
     app_dir = Path(__file__).resolve().parent / output_path
@@ -180,46 +216,21 @@ def _maybe_push_generated_mvp_to_github(project_id: str, output_path: str = "Gen
 
     try:
         service = GitHubRepoService(client_id=os.getenv("GITHUB_CLIENT_ID") or GitHubRepoService.DEFAULT_CLIENT_ID)
-        access_token = os.getenv("GITHUB_ACCESS_TOKEN")
-
-        if access_token:
-            repo_info = service.create_repository(
-                access_token,
-                repo_name=os.getenv("GITHUB_REPO_NAME", GitHubRepoService.DEFAULT_REPO_NAME),
-                description=os.getenv("GITHUB_REPO_DESCRIPTION", GitHubRepoService.DEFAULT_DESCRIPTION),
-            )
-            files = service.collect_files_from_directory(app_dir)
-            push_result = service.push_files_to_repo(
-                access_token,
-                repo_info["owner"],
-                repo_info["name"],
-                files,
-                branch=repo_info["default_branch"],
-            )
-            logger.info(f"[github] ✅ GitHub push completed for project {project_id}: {repo_info['full_name']}")
-            return {"repo": repo_info, "push": push_result}
-
-        auth_info = service.authenticate_device_flow(
-            callback=lambda payload: logger.info(
-                f"[github] Device auth required: verification_uri={payload.get('verification_uri')}, "
-                f"user_code={payload.get('user_code')}"
-            )
-        )
         repo_info = service.create_repository(
-            auth_info["access_token"],
-            repo_name=os.getenv("GITHUB_REPO_NAME", GitHubRepoService.DEFAULT_REPO_NAME),
-            description=os.getenv("GITHUB_REPO_DESCRIPTION", GitHubRepoService.DEFAULT_DESCRIPTION),
+            token,
+            repo_name=GitHubRepoService.DEFAULT_REPO_NAME,
+            description=GitHubRepoService.DEFAULT_DESCRIPTION,
         )
         files = service.collect_files_from_directory(app_dir)
         push_result = service.push_files_to_repo(
-            auth_info["access_token"],
+            token,
             repo_info["owner"],
             repo_info["name"],
             files,
             branch=repo_info["default_branch"],
         )
-        logger.info(f"[github] ✅ GitHub push completed via device flow for project {project_id}: {repo_info['full_name']}")
-        return {"auth": auth_info, "repo": repo_info, "push": push_result}
+        logger.info(f"[github] ✅ GitHub push completed for project {project_id}: {repo_info['full_name']}")
+        return {"repo": repo_info, "push": push_result}
     except Exception as exc:  # pragma: no cover - depends on live GitHub auth state
         logger.warning(f"[github] Failed to push generated MVP to GitHub for project {project_id}: {exc}")
         return None
@@ -424,7 +435,13 @@ def is_over_limit(user_id: str) -> bool:
 # BACKGROUND WORKER
 # ============================================================================
 
-async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_name: str) -> None:
+async def generate_mvp_task(
+    user_id: str,
+    project_id: str,
+    prompt: str,
+    project_name: str,
+    github_access_token: Optional[str] = None,
+) -> None:
     """
     Background task to generate MVP using CrewAI crew.
     Uses a lock to ensure serial processing without concurrent generations.
@@ -471,7 +488,15 @@ async def generate_mvp_task(user_id: str, project_id: str, prompt: str, project_
                 results_dict[project_id]["data"]["status"] = "completed"
                 logger.info(f"[Task {project_id}] ✅ QR generated and status set to completed")
 
-                _maybe_push_generated_mvp_to_github(project_id, "GeneratedMVP/MyApp")
+                resolved_token = (github_access_token or github_connected_accounts.get(user_id) or "").strip()
+                github_payload = _maybe_push_generated_mvp_to_github(
+                    project_id,
+                    "GeneratedMVP/MyApp",
+                    access_token=resolved_token,
+                )
+                if github_payload:
+                    results_dict[project_id]["data"].update(_extract_github_repo_payload(github_payload))
+                    logger.info(f"[Task {project_id}] ✅ GitHub repo metadata attached to completion payload")
                 cleanup_generated_mvp_folder()
                 
                 # Update user's usage tracker
@@ -556,6 +581,7 @@ class PromptRequest(BaseModel):
     user_id: str
     prompt: str
     project_name: str
+    github_access_token: Optional[str] = None
 
 
 class PromptResponse(BaseModel):
@@ -643,11 +669,14 @@ async def github_device_auth_status(request: Request):
     if not device_code:
         raise HTTPException(status_code=400, detail="device_code is required")
 
+    user_id = str(payload.get("user_id") or "").strip()
     session = github_auth_sessions.get(device_code)
     if not session:
         return {"status": "error", "message": "device_code not found or session expired"}
 
     if session.get("access_token"):
+        if user_id:
+            github_connected_accounts[user_id] = session["access_token"]
         return {
             "status": "success",
             "device_code": device_code,
@@ -664,6 +693,8 @@ async def github_device_auth_status(request: Request):
         )
         session["access_token"] = token
         session["status"] = "success"
+        if user_id:
+            github_connected_accounts[user_id] = token
         return {
             "status": "success",
             "device_code": device_code,
@@ -767,7 +798,15 @@ async def submit_prompt(request: PromptRequest):
         }
 
         # Fire off background task without waiting (returns immediately)
-        task = asyncio.create_task(generate_mvp_task(user_id, project_id, prompt, project_name))
+        task = asyncio.create_task(
+            generate_mvp_task(
+                user_id,
+                project_id,
+                prompt,
+                project_name,
+                github_access_token=request.github_access_token,
+            )
+        )
         active_tasks.add(task)  # Keep strong reference to prevent garbage collection
         logger.info(f"[/api/prompt] Fired background task for project {project_id}, active_tasks count: {len(active_tasks)}")
 
