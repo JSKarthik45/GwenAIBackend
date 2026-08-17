@@ -26,6 +26,7 @@ code_task:
     4. Always use double quotes ("") for empty strings (e.g., useState("") or resetting input) to prevent JSON parsing failures in the tool call.
   expected_output: >
     A brief confirmation message: "Files written successfully". Do NOT return the source code itself or any conversational filler.
+  agent: coder
 # code_task:
 #   description: >
 #     Implement the single-page React Native app and save it to 'src/Content.js' using the FileWriterTool.
