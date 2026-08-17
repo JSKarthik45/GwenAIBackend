@@ -17,9 +17,21 @@ architecture_task:
 code_task:
   description: >
     Implement the single-page React Native app and save it to 'src/Content.js' using the FileWriterTool.
-    Ensure the code is robust, free of syntax errors, and fully functional.
-    Only write to 'src/Content.js'. Do NOT write to any other path.
-    CRITICAL: Always use double quotes ("") for empty strings (e.g., useState("") or resetting input) to prevent quote parsing issues.
+    Ensure the code is robust, free of syntax errors, and fully functional, while strictly optimizing for minimal token usage.
+    
+    CRITICAL IMPLEMENTATION RULES:
+    1. Strip ALL comments from the codebase. 
+    2. Use the simplest possible StyleSheet definitions.
+    3. Only write to 'src/Content.js'. Do NOT write to any other path.
+    4. Always use double quotes ("") for empty strings (e.g., useState("") or resetting input) to prevent JSON parsing failures in the tool call.
   expected_output: >
-    A brief confirmation message: "Files written successfully". Do NOT return the source code itself.
-  agent: coder
+    A brief confirmation message: "Files written successfully". Do NOT return the source code itself or any conversational filler.
+# code_task:
+#   description: >
+#     Implement the single-page React Native app and save it to 'src/Content.js' using the FileWriterTool.
+#     Ensure the code is robust, free of syntax errors, and fully functional.
+#     Only write to 'src/Content.js'. Do NOT write to any other path.
+#     CRITICAL: Always use double quotes ("") for empty strings (e.g., useState("") or resetting input) to prevent quote parsing issues.
+#   expected_output: >
+#     A brief confirmation message: "Files written successfully". Do NOT return the source code itself.
+#   agent: coder
